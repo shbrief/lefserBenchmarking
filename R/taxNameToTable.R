@@ -4,22 +4,23 @@
     } else {return(x)}
 }
 
+#' Split the taxonomic label in character into the tax_table format
+#'
 #' @param x A character vector of taxonomic names
-#' @param prefix Logical. If it's `TRUE`, there is a prefix showing the 
+#' @param prefix Logical. If it's `TRUE`, there is a prefix showing the
 #' taxonomic levels.
-#' 
-#' 
+#'
 taxNameToTable <- function(x, prefix = TRUE) {
-    
+
     classes <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
     taxTb <- matrix(nrow = length(x), ncol = length(classes))
     colnames(taxTb) <- classes
     rownames(taxTb) <- x
-    
+
     for (i in seq_along(x)) {
         if (isTRUE(prefix)) {
             y <- strsplit(x[i], "\\|") %>% unlist
-            
+
             taxTb[i, "Kingdom"] <- y[grep("k__", y)] %>% gsub("k__", "", .) %>% .empty_func()
             taxTb[i, "Phylum"] <- y[grep("p__", y)] %>% gsub("p__", "", .) %>% .empty_func()
             taxTb[i, "Class"] <- y[grep("c__", y)] %>% gsub("c__", "", .) %>% .empty_func()
