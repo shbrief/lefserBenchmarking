@@ -1,6 +1,6 @@
 Package: lefserBenchmark
 Title: Package
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: person("Sehyun", "Oh", email = "Sehyun.Oh@cuny.sph.edu", role = c("aut", "cre"))
 Description: Examples and accessory functions for benchmarking lefser against 
   the original (LEfSe) and the similar (microbiomeMarker) tools.
