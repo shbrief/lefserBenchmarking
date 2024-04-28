@@ -1,57 +1,29 @@
-## Modifed https://github.com/sdgamboa/lefse_comparison/blob/main/get_dataset.R
-## Prepare LEfSe input table
+library(microbiomeMarker)
+library(lefserBenchmarking)
 
-suppressPackageStartupMessages({
-    library(SummarizedExperiment)
-    library(microbiomeMarker)
-    library(dplyr)
-    library(tibble)
-    library(magrittr)
-    library(lefserBenchmark)
-})
-
-projDir <- "~/Projects/lefserBenchmark/data/LEfSe_Inputs"
-
-## Covert phylose object to SummarizedExperiment object
+## Load data
 data(kostic_crc)
 kostic_crc_small <- phyloseq::subset_taxa(
     kostic_crc,
     Phylum %in% c("Firmicutes")
 )
 
-se <- formatInput(kostic_crc_small, format_to = "SummarizedExperiment")
-se$DIAGNOSIS <- as.factor(se$DIAGNOSIS)
+## Convert phyloseq object to SummarizedExperiment object
+kostic_se <- formatInput(kostic_crc_small, format_to = "SummarizedExperiment")
+kostic_se$DIAGNOSIS <- as.factor(kostic_se$DIAGNOSIS)
 
-## Example datset from lefser package as SummarizedExperiment
-data(zeller14)
-se <- zeller14[, zeller14$study_condition != "adenoma"]
-rownames(se) <- sub('^.+([a-z]__.+$)', '\\1', rownames(se))
-
-## Matrix with counts
-counts <- assay(se) %>%
-    as.data.frame() %>%
-    rownames_to_column('features') %>%
-    mutate(across(.cols = everything(), .fns = ~as.character(.x))) %>%
-    set_colnames(paste0('col1', seq_along(.)))
-
-## Sample metadata
-sm <- colData(se) %>%
-    as.data.frame() %>%
-    rownames_to_column('Sample') %>%
-    select(study_condition, age_category, Sample) %>%
-    t() %>%
-    as.data.frame() %>%
-    rownames_to_column('helper_col') %>%
-    mutate(across(.cols = everything(), .fns = ~as.character(.x))) %>%
-    set_colnames(paste0('col1', seq_along(.)))
-
-## Combine counts and sample_metadata in a single data frame
-data <- bind_rows(sm, counts)
-colnames(data) <- NULL
-
-## Export to txt file
-write.table(
-    data, file = file.path(projDir, "kostic_crc.txt"),
-    sep = '\t', row.names = FALSE, col.names = FALSE,
-    quote = FALSE
+## Convert SummarizedExperiment to a LEfSe input table
+exprs <- assay(kostic_se, i = 1L)
+datas <- data.frame(
+    condition = as.factor(kostic_se$DIAGNOSIS),
+    subjectID = kostic_se$X.SampleID,
+    t(exprs)
 )
+
+text <- mapply(function(x, y) {paste0(x, "\t", y)}, 
+               x = names(datas), 
+               y = sapply(datas, paste0, collapse = "\t"))
+
+inputDir <- "~/Projects/lefserBenchmarking/LEfSe_Inputs"
+writeLines(text, 
+           con = file(file.path(inputDir, "kostic_crc.txt")))
