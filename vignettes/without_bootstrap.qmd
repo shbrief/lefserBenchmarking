@@ -1,0 +1,117 @@
+---
+title: "Revised LDA - remove subsetting and bootstrapping"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Revised algorithm}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(lefser)
+    library(microbiomeMarker)
+    library(lefserBenchmarking)
+    library(grid)
+    library(VennDiagram)
+})
+```
+
+# Load data
+```{r load_zeller14}
+## Old cMD data in the lefser package
+data(zeller14)
+zeller14 <- zeller14[, zeller14$study_condition != "adenoma"]
+```
+
+# Run lefser
+## With bootstrap
+```{r zeller14_by_lefser}
+zeller14$study_condition <- factor(zeller14$study_condition,
+                                   levels = c("CRC", "control")) # re-levels
+
+set.seed(1982)
+res1 <- lefser::lefser(relativeAb(zeller14), 
+                       groupCol = "study_condition", 
+                       blockCol = "age_category")
+lefserPlot(res1, title = "Without Bootstrap")
+```
+
+## Without bootstrap
+```{r}
+set.seed(1982)
+res2 <- lefserBenchmarking::lefserBS(relativeAb(zeller14), 
+                                     groupCol = "study_condition", 
+                                     blockCol = "age_category")
+lefserPlot(res2, title = "With Bootstrap")
+```
+
+# Comparison
+## Venn diagram
+```{r message=FALSE}
+library(dplyr)
+lefser_output1 <- res1 %>% 
+    mutate(app_name = 'lefser') %>% 
+    arrange(scores) %>% 
+    rename(feature = Names, lefser_LDA = scores)
+lefser_output1$feature <- lapply(lefser_output1$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+
+lefser_output2 <- res2 %>% 
+    mutate(app_name = 'lefser') %>% 
+    arrange(scores) %>% 
+    rename(feature = Names, lefser_LDA = scores)
+lefser_output2$feature <- lapply(lefser_output2$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+```
+
+```{r}
+set1 <- lefser_output1$feature
+set2 <- lefser_output2$feature
+
+grid.newpage()
+venn_object <- venn.diagram(
+    x = list(set1, set2),
+    category.names = c("With Bootstrap", "Without Bootstrap"),
+    filename = NULL
+)
+grid.draw(venn_object)
+```
+
+## Speed
+```{r}
+library(microbenchmark)
+comp <- microbenchmark(lefser::lefser(relativeAb(zeller14), 
+                                      groupCol = "study_condition", 
+                                      blockCol = "age_category"),
+                       lefserBS(relativeAb(zeller14), 
+                                 groupCol = "study_condition", 
+                                 blockCol = "age_category"),
+                       times = 10L)
+comp$expr <- c("With Bootstrap", "Without Bootstrap")
+
+comp
+boxplot(comp)
+```
+
+# SessionInfo
+
+<details>
+```{r}
+sessionInfo()
+```
+</details>
+

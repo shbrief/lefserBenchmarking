@@ -1,0 +1,184 @@
+---
+title: "Biomarker discoverty with mice_rag2 data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Mice_Rag2 data}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(lefser)
+    library(microbiomeMarker)
+    library(dplyr)
+    library(lefserBenchmarking)
+})
+
+projDir <- "~/Projects/lefserBenchmarking"
+```
+
+# Load data
+This is the mice data from LEfSe paper (Figure 3, Supplementary File 10)
+```{bash echo=FALSE, eval=FALSE}
+## Mice data for Figure 3 of the LEfSe paper
+wget https://static-content.springer.com/esm/art%3A10.1186%2Fgb-2011-12-6-r60/MediaObjects/13059_2011_2561_MOESM10_ESM.TXT
+```
+
+```{r message=FALSE}
+mice <- readr::read_table(file.path(projDir, "data/LEfSe_Inputs/mice_rag2.txt"), 
+                          col_names = FALSE)
+mice[1:4, 1:4]
+```
+
+# Run lefser
+Put together as SummarizedExperiment
+```{r}
+relative_ab <- mice[-1,] %>% tibble::column_to_rownames("X1") 
+relative_ab <- apply(relative_ab, 2, as.numeric)
+rownames(relative_ab) <- mice[["X1"]][-1]
+colData <- as(mice[1, -1], "data.frame") %>% t 
+colnames(colData) <- "Genotype"
+
+rowData <- taxNameToTable(rownames(relative_ab), FALSE)
+
+mice_se <- SummarizedExperiment(
+    assays = list(relative_abundance = relative_ab), 
+    colData = colData, 
+    rowData = rowData
+)
+```
+
+```{r}
+set.seed(1982)
+res <- lefser(relativeAb(mice_se), 
+              groupCol = "Genotype", 
+              kruskal.threshold = 0.01,
+              lda.threshold = 2)
+lefserPlot(res)
+```
+
+
+# Run microbiomeMarker
+```{r}
+mice_ps <- mia::makePhyloseqFromTreeSE(mice_se, 
+                                       assay.type = "relative_abundance")
+set.seed(1982)
+mm_lefse <- run_lefse(
+    mice_ps,
+    wilcoxon_cutoff = 0.01,
+    group = "Genotype",
+    multigrp_strat = TRUE,
+    lda_cutoff = 2
+)
+
+plot_ef_bar(mm_lefse)
+```
+
+# Comparison
+## lefser
+```{r message=FALSE}
+lefser_output <- res %>% 
+    mutate(app_name = 'lefser') %>% 
+    arrange(scores) %>% 
+    rename(feature = Names, lefser_LDA = scores)
+lefser_output$feature <- lapply(lefser_output$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+
+head(lefser_output)
+```
+
+## LEfSe from Docker
+```{r}
+LEfSeZellerDir <- "~/Projects/lefserBenchmarking/data/LEfSe_Outputs/mice_rag2"
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_docker_LDA', 'pval')
+lefse_docker <- readr::read_tsv(
+    file.path(LEfSeZellerDir, "mice_rag2.res"),
+    col_names = FALSE, show_col_types = FALSE) %>% 
+    magrittr::set_colnames(col_names) %>% 
+    filter(!is.na(lefse_docker_LDA)) %>% 
+    mutate(lefse_galaxy_LDA = ifelse(class == "control", -lefse_docker_LDA, lefse_docker_LDA),
+           app_name = 'lefse_docker')
+
+lefse_docker$feature <- lapply(lefse_docker$feature, function(x) {
+    strsplit(x, "\\.") %>% unlist %>% tail(., 1) %>% gsub("t__|c__|f__|s__|p__|o__|g__", "", .)}) %>% unlist
+
+head(lefse_docker)
+```
+
+## microbiomeMarker
+```{r}
+mm_output <- data.frame(
+    feature = marker_table(mm_lefse)$feature,
+    mm_LDA = marker_table(mm_lefse)$ef_lda,
+    app_name = "microbiomeMarker") %>% arrange(mm_LDA)
+
+mm_output$feature <- lapply(mm_output$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+
+head(mm_output)
+```
+
+## Plot
+```{r}
+combined_outputs <- bind_rows(lefser_output, lefse_docker, mm_output) %>% 
+    mutate(LDA = coalesce(lefser_LDA, lefse_docker_LDA, mm_LDA))
+
+combined_outputs %>% 
+    count(app_name) %>% 
+    ggplot(aes(app_name, n)) +
+    geom_col() +
+    geom_label(aes(label = n)) +
+    ggtitle(
+        'Number of significiant features identified by the different applications using lefse'
+    )
+```
+
+```{r}
+set1 <- lefser_output$feature
+set2 <- lefse_docker$feature
+set3 <- mm_output$feature
+
+## Overlap between LEfSe and lefser
+length(intersect(set1, set2))
+setdiff(set1, set2)
+setdiff(set2, set1)
+
+## Overlap between LEfSe and microbiomeMarker
+length(intersect(set3, set2))
+setdiff(set3, set2)
+setdiff(set2, set3)
+```
+
+```{r venn_diagram, echo=FALSE, eval=FALSE}
+grid.newpage()
+venn_object <- venn.diagram(
+    x = list(set1, set2, set3),
+    category.names = c("lefser", "LEfSe", "microbiomeMarker"),
+    filename = NULL
+)
+grid.draw(venn_object)
+```
+
+
+# SessionInfo
+
+<details>
+```{r}
+sessionInfo()
+```
+</details>
+

@@ -1,0 +1,96 @@
+---
+title: "Biomarker discoverty with Kostic_CRC data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Kostic_CRC data}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(microbiomeMarker)
+    library(lefser)
+    library(lefserBenchmarking)
+    library(phyloseq)
+})
+```
+
+# Load data
+```{r}
+data(kostic_crc)
+kostic_crc_small <- phyloseq::subset_taxa(
+    kostic_crc,
+    Phylum %in% c("Firmicutes")
+)
+```
+
+# Run microbiomeMarker
+```{r}
+set.seed(1982)
+mm_lefse <- run_lefse(
+    kostic_crc_small,
+    wilcoxon_cutoff = 0.02,
+    group = "DIAGNOSIS",
+    kw_cutoff = 0.02,
+    multigrp_strat = TRUE,
+    lda_cutoff = 3
+)
+
+plot_ef_bar(mm_lefse)
+```
+
+
+# Run lefser
+Convert phyloseq object to SummarizedExperiment
+```{r}
+kostic_se <- formatInput(kostic_crc_small, format_to = "SummarizedExperiment")
+kostic_se$DIAGNOSIS <- as.factor(kostic_se$DIAGNOSIS)
+```
+
+```{r run_lefser}
+set.seed(1982)
+res <- lefser(relativeAb(kostic_se), 
+              groupCol = "DIAGNOSIS", 
+              kruskal.threshold = 0.02,
+              lda.threshold = 3)
+
+options(repr.plot.width = w, repr.plot.height = h)
+lefserPlot(res, trim.names = FALSE)
+```
+
+
+# Run LEfSe
+Convert SummarizedExperiment to a LEfSe input table
+```{r eval=FALSE}
+exprs <- assay(kostic_se, i = 1L)
+datas <- data.frame(
+    condition = as.factor(kostic_se$DIAGNOSIS),
+    subjectID = kostic_se$X.SampleID,
+    t(exprs)
+)
+
+text <- mapply(function(x, y) {paste0(x, "\t", y)}, 
+               x = names(datas), 
+               y = sapply(datas, paste0, collapse = "\t"))
+
+inputDir <- "~/Projects/lefserBenchmarking/LEfSe_Inputs"
+writeLines(text, 
+           con = file(file.path(inputDir, "kostic_crc.txt")))
+```
+
+
+

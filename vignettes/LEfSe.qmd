@@ -1,0 +1,113 @@
+---
+title: "Run LEfSe from Docker container"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Run LEfSe from Docker container}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      eval = FALSE)
+```
+
+
+```{bash}
+## Start the LEfSe docker
+docker run -it biobakery/lefse bash
+```
+
+# mice_rag2 data example
+This is the dataset used in the Figure 3 of the LEfSe paper 
+```{bash}
+## Make a directory for a given data
+mkdir mice_rag2
+cd mice_rag2
+
+## Download sample data
+curl https://raw.githubusercontent.com/shbrief/lefserBenchmark/main/data/LEfSe_Inputs/mice_rag2.txt?token=GHSAT0AAAAAACHEXOIPYMYBYGF2S4LGKMAWZQTRD2Q > mice_rag2.txt
+```
+
+I reference this answer: https://forum.biobakery.org/t/lefse-galaxy-and-conda-codes/6099 
+```{bash}
+/home/linuxbrew/.linuxbrew/bin/format_input.py mice_rag2.txt mice_rag2.in -c 1 -s -1 -u -1 -o 1000000
+/home/linuxbrew/.linuxbrew/bin/run_lefse.py mice_rag2.in mice_rag2.res -a 0.01 -l 2
+/home/linuxbrew/.linuxbrew/bin/plot_res.py mice_rag2.res mice_rag2.res.svg --format svg
+/home/linuxbrew/.linuxbrew/bin/plot_cladogram.py mice_rag2.res mice_rag2.svg --format svg
+```
+
+
+
+Install gsutil following this: https://cloud.google.com/storage/docs/gsutil_install#linux 
+```{bash}
+/home/linuxbrew/google-cloud-sdk/bin/gsutil ls
+```
+
+```{bash}
+## Copy the results to Google Cloud bucket
+cd ..
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2 gs://sh_misc
+```
+
+```{r}
+library(AnVIL)
+gsutil_cp("gs://sh_misc/mice_rag2", 
+          "~/Projects/lefserBenchmark/data/LEfSe_Outputs", 
+          recursive = TRUE)
+```
+
+# Zeller data from the lefser package
+
+```{bash zeller14_data}
+/home/linuxbrew/.linuxbrew/bin/format_input.py zeller14.txt zeller14.in -c 1 -s 2 -u 3 -o 1000000
+/home/linuxbrew/.linuxbrew/bin/run_lefse.py zeller14.in zeller14.res
+/home/linuxbrew/.linuxbrew/bin/plot_res.py zeller14.res zeller14.res.svg --format svg
+/home/linuxbrew/.linuxbrew/bin/plot_cladogram.py zeller14.res zeller14.svg --format svg
+```
+
+```{r}
+gsutil_cp("gs://sh_misc/zeller14", 
+          "~/Projects/lefserBenchmark/data/LEfSe_Outputs", 
+          recursive = TRUE)
+```
+
+# kostic_crc data example
+This is the dataset provided in the microbiomeMarker package. 
+```{bash}
+## Make a directory for a given data
+mkdir kostic_crc
+cd kostic_crc
+
+## Download sample data
+## `kostic_crc.txt` containing the OTU in feature names
+curl https://raw.githubusercontent.com/shbrief/lefserBenchmarking/main/data/LEfSe_Inputs/kostic_crc.txt > kostic_crc.txt
+```
+
+```{bash eval=FALSE}
+/home/linuxbrew/.linuxbrew/bin/format_input.py kostic_crc.txt kostic_crc.in -c 1 -s -1 -u 2 -o 1000000
+/home/linuxbrew/.linuxbrew/bin/run_lefse.py kostic_crc.in kostic_crc.res -a 0.02 -l 3
+/home/linuxbrew/.linuxbrew/bin/plot_res.py kostic_crc.res kostic_crc.res.svg --format svg
+/home/linuxbrew/.linuxbrew/bin/plot_cladogram.py kostic_crc.res kostic_crc.svg --format svg
+```
+
+```{bash}
+## Copy the results to Google Cloud bucket
+cd ..
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r kostic_crc gs://sh_misc
+```
+
+```{r}
+AnVIL::gsutil_cp("gs://sh_misc/kostic_crc", 
+                 "~/Projects/lefserBenchmarking/data/LEfSe_Outputs", 
+                 recursive = TRUE)
+```
