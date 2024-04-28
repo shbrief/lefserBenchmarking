@@ -11,12 +11,14 @@
 #' `phyloseq` object.
 #' @param format_to The target format. Available options are
 #' `c("SummarizedExperiment", "phyloseq")`.
+#' @param addOTU Logical. If `TRUE`, feature name/number is kept with the
+#' `OTU_` prefix. If `FALSE`, only the taxonomic levels are used.
 #'
 #' @examples
 #' formatInput(kostic_crc_small, format_to = "SummarizedExperiment")
 #'
 #' @export
-formatInput <- function(dat, format_to) {
+formatInput <- function(dat, format_to, addOTU = TRUE) {
 
     ##### phyloseq to SE ----------------
     if (class(dat) == "phyloseq") {
@@ -24,7 +26,7 @@ formatInput <- function(dat, format_to) {
         ##### Deconstruct
         assay <- unclass(otu_table(dat))
         coldata <- as(sample_data(dat), "data.frame")
-        rowdata <- tax_table(dat) %>% taxTableToName()
+        rowdata <- tax_table(dat) %>% taxTableToName(., addOTU = addOTU)
         rownames(assay) <- rownames(rowdata) # UPDATE to link through key column
 
         ##### Reconstruct

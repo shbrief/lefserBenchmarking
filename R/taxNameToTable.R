@@ -10,6 +10,7 @@
 #' @param prefix Logical. If it's `TRUE`, there is a prefix showing the
 #' taxonomic levels.
 #'
+#' @export
 taxNameToTable <- function(x, prefix = TRUE) {
 
     classes <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")

@@ -4,18 +4,21 @@
 \alias{taxTableToName}
 \title{Combine tax_table information into a character vector}
 \usage{
-taxTableToName(taxTable, delim = "|")
+taxTableToName(taxTable, delim = "|", addOTU = TRUE)
 }
 \arguments{
 \item{taxTable}{A `taxonomyTable` object from phyloseq.}
 
 \item{delim}{A character(1). Delimeter to separate taxon levels.}
+
+\item{addOTU}{Logical. If `TRUE`, feature name/number is kept with the
+`OTU_` prefix. If `FALSE`, only the taxonomic levels are used.}
 }
 \description{
 Combine tax_table information into a character vector
 }
 \examples{
 data(kostic_crc_small)
-taxTableToName(tax_table(kostic_crc_small))
+taxTableToName(tax_table(kostic_crc_small), addOTU = TRUE)
 
 }

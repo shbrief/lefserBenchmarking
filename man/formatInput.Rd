@@ -4,7 +4,7 @@
 \alias{formatInput}
 \title{Format metagenomic data for different biomarker discovery tools}
 \usage{
-formatInput(dat, format_to)
+formatInput(dat, format_to, addOTU = TRUE)
 }
 \arguments{
 \item{dat}{A microbiome abundance data. It can be a data frame (an input
@@ -13,6 +13,9 @@ format for LEfSe's `run_lefse.py` function), `SummarizedExperiment`, or
 
 \item{format_to}{The target format. Available options are
 `c("SummarizedExperiment", "phyloseq")`.}
+
+\item{addOTU}{Logical. If `TRUE`, feature name/number is kept with the
+`OTU_` prefix. If `FALSE`, only the taxonomic levels are used.}
 }
 \description{
 Input format conversion across `SummarizedExperiment` and `phyloseq` objects.
