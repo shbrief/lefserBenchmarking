@@ -1,0 +1,147 @@
+---
+title: "Reproducibility using gingival benchmarking data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Reproducibility - gingival benchmarking data}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      eval = FALSE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+    library(dplyr)
+    library(ggplot2)
+    library(readr)
+})
+```
+
+```{r}
+## initial implementation (with randomness) + seed outside
+set.seed(1982)
+res <- lefser(
+    relab = lefserInput,
+    kruskal.threshold = kwth,
+    wilcox.threshold = wth,
+    lda.threshold = ldath,
+    groupCol = "body_subsite",
+    blockCol = NULL)  
+
+res$features <- res$features %>% gsub("_", "", .) %>% gsub("\\.", "", .)
+res_taxon <- res %>% 
+    dplyr::left_join(., genus, by = "features")
+```
+
+```{r}
+datDir <- "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations"
+a <- read_csv(file.path(datDir, "lefser_10iters_no_rnorm.csv")) # no randomness
+b <- read_csv(file.path(datDir, "lefser_10iters_w_rnorm.csv")) # randomness without seed
+c <- read_csv(file.path(datDir, "lefser_10iters_w_rnorm_temp_seed.csv")) # randomness with temporal seed (1982) inside
+d <- read_csv(file.path(datDir, "LEfSe_10iters.csv")) # LEfSe
+
+a$feature <- a$feature %>% gsub("_", "", .) %>% gsub("\\.", "", .)
+b$feature <- b$feature %>% gsub("_", "", .) %>% gsub("\\.", "", .)
+c$feature <- c$feature %>% gsub("_", "", .) %>% gsub("\\.", "", .)
+
+a_taxon <- a %>% 
+    dplyr::rename(features = feature) %>%
+    dplyr::left_join(., genus, by = "features")
+```
+
+
+
+
+
+
+# Data
+## Source
+Ten LEfSe results are from [this GitHub repo][].
+[this GitHub repo]: https://github.com/sdgamboa/MicrobiomeBenchmarkDataLefse
+
+Collecting all 10 iterations from LEfSe, lefser, and microbiomeMarker are
+described in `LEfSe_Reproducibility_gingival.R` file.
+
+## Load
+```{r}
+datDir <- "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations"
+lefse_res <- read_csv(file.path(datDir, "LEfSe_10iters.csv"))
+lefser_res <- read_csv(file.path(datDir, "lefser_10iters_no_rnorm.csv"))
+mm_res <- read_csv(file.path(datDir, "microbiomeMarker_10iters.csv"))
+```
+
+
+# Plot
+## LEfSe
+```{r}
+lvs <- lefse_res$feature[order(lefse_res$mean, decreasing = TRUE)]
+lefse_res$feature <- factor(lefse_res$feature, level = lvs)
+ggplot(lefse_res, aes(x = feature, y = mean)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2, col = "red") +
+    theme_bw() + 
+    theme(
+        # axis.text.x = element_blank(),
+        # axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        ) + 
+    labs(title = "Reproducibility of LEfSe",
+         x = "Features", y = "LDA scores")
+```
+
+## lefser
+```{r}
+lvs <- lefser_res$feature[order(lefser_res$mean, decreasing = TRUE)]
+lefser_res$feature <- factor(lefser_res$feature, level = lvs)
+ggplot(lefser_res, aes(x = feature, y = mean)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2, col = "red") +
+    theme_bw() + 
+    theme(
+        # axis.text.x = element_blank(),
+        # axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        ) + 
+    labs(title = "Reproducibility of lefser",
+         x = "Features", y = "LDA scores")
+```
+
+
+
+## microbiomeMarker
+```{r}
+lvs <- mm_res$feature[order(mm_res$mean, decreasing = TRUE)]
+mm_res$feature <- factor(mm_res$feature, level = lvs)
+
+mm_res$feature <- mm_res$feature %>% gsub("_", "", .) %>% gsub("\\.", "", .)
+mm_res_taxon <- mm_res %>% 
+    dplyr::rename(features = feature) %>%
+    dplyr::left_join(., genus, by = "features")
+```
+
+
+```{r}
+ggplot(mm_res, aes(x = feature, y = mean)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2, col = "red") +
+    theme_bw() + 
+    theme(
+        # axis.text.x = element_blank(),
+        # axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        ) +
+    labs(title = "Reproducibility of microbiomeMarker",
+         x = "Features", y = "LDA scores")
+```

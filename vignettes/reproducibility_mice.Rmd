@@ -1,0 +1,197 @@
+---
+title: "Reproducibility of LEfSe using oral benchmarking data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Reproducibility of LEfSe - oral benchmarking data}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      eval = FALSE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+    library(dplyr)
+    library(ggplot2)
+})
+```
+
+
+# LEfSe
+```{r}
+dir <- "~/Projects/lefserBenchmarking/data/LEfSe_Outputs_Iterations"
+fnames <- list.files(dir)[grep("\\.res", list.files(dir))]
+
+## Combine all results ----------------
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'LDA', 'pval')
+lefser_iter <- as.list(vector(length = 10))
+
+for (i in seq_along(lefser_iter)) {
+    res <- readr::read_tsv(
+        file.path(dir, fnames[i]), col_names = FALSE, show_col_types = FALSE) %>% 
+        magrittr::set_colnames(col_names) %>% 
+        filter(!is.na(LDA)) %>% 
+        mutate(LDA = ifelse(class == "control", -LDA, LDA),
+               iter_num = i)
+    lefser_iter[[i]] <- res
+}
+
+iter_tb <- lefser_iter[[1]][c("feature", "LDA")] %>% 
+    magrittr::set_colnames(c("feature", paste0("LDA", 1)))
+
+for (i in 2:10) {
+    sub <- lefser_iter[[i]][c("feature", "LDA")] %>% 
+        magrittr::set_colnames(c("feature", paste0("LDA", i)))
+    iter_tb <- full_join(iter_tb, sub, by = "feature")
+}
+
+LEfSe_iter_tb_nonNA <- iter_tb
+LEfSe_iter_tb_nonNA[is.na(LEfSe_iter_tb_nonNA)] <- 0
+
+LEfSe_iter_tb_nonNA$mean <- apply(LEfSe_iter_tb_nonNA[2:11], 1, mean)
+LEfSe_iter_tb_nonNA$sd <- apply(LEfSe_iter_tb_nonNA[2:11], 1, sd)
+
+# ## Most erroneous features -----------------
+# iter_tb_sub <- LEfSe_iter_tb_nonNA[order(LEfSe_iter_tb_nonNA$sd, decreasing = TRUE)[1:20],]
+# iter_tb_sub$feature <- factor(iter_tb_sub$feature, level = iter_tb_sub$feature)
+# ggplot(iter_tb_sub, aes(x = feature, y = mean)) +
+#     geom_bar(stat = "identity") +
+#     geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2) +
+#     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+## All features ----------------
+lvs <- LEfSe_iter_tb_nonNA$feature[order(LEfSe_iter_tb_nonNA$mean, decreasing = TRUE)]
+LEfSe_iter_tb_nonNA$feature <- factor(LEfSe_iter_tb_nonNA$feature, level = lvs)
+ggplot(LEfSe_iter_tb_nonNA, aes(x = feature, y = mean)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2, col = "red") +
+    theme(axis.text.x = element_blank())
+```
+
+# lefser
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(lefser)
+    library(dplyr)
+    library(ggplot2)
+    library(lefserBenchmarking)
+})
+
+projDir <- "~/Projects/lefserBenchmarking"
+```
+
+## Load data
+This is the mice data from LEfSe paper (Figure 3, Supplementary File 10)
+```{bash echo=FALSE, eval=FALSE}
+## Mice data for Figure 3 of the LEfSe paper
+wget https://static-content.springer.com/esm/art%3A10.1186%2Fgb-2011-12-6-r60/MediaObjects/13059_2011_2561_MOESM10_ESM.TXT
+```
+
+```{r message=FALSE}
+mice <- readr::read_table(file.path(projDir, "data/LEfSe_Inputs/mice_rag2.txt"), 
+                          col_names = FALSE)
+```
+
+## Run lefser
+Put together as SummarizedExperiment
+```{r}
+relative_ab <- mice[-1,] %>% tibble::column_to_rownames("X1") 
+relative_ab <- apply(relative_ab, 2, as.numeric)
+rownames(relative_ab) <- mice[["X1"]][-1]
+colData <- as(mice[1, -1], "data.frame") %>% t 
+colnames(colData) <- "Genotype"
+
+rowData <- taxNameToTable(rownames(relative_ab), FALSE)
+
+mice_se <- SummarizedExperiment(
+    assays = list(relative_abundance = relative_ab), 
+    colData = colData, 
+    rowData = rowData
+)
+```
+
+```{r eval=FALSE, echo=FALSE}
+# Subset to terminal nodes
+tn <- get_terminal_nodes(rownames(mice_se))
+mice_se <- mice_se[tn,]
+```
+
+## Repeats
+```{r}
+resAll <- as.list(vector(length = 10))
+
+for (i in 1:10) {
+    set.seed(i)
+    res <- lefser(relativeAb(mice_se), 
+                  groupCol = "Genotype", 
+                  kruskal.threshold = 0.01,
+                  lda.threshold = 2)
+    resAll[[i]] <- res
+}
+```
+
+```{r}
+lefser_iter_tb <- resAll[[1]][c("features", "scores")] %>% 
+    magrittr::set_colnames(c("feature", paste0("LDA", 1)))
+
+for (i in 2:10) {
+    sub <- resAll[[i]][c("features", "scores")] %>% 
+        magrittr::set_colnames(c("feature", paste0("LDA", i)))
+    lefser_iter_tb <- full_join(lefser_iter_tb, sub, by = "feature")
+}
+
+lefser_iter_tb_nonNA <- lefser_iter_tb
+lefser_iter_tb_nonNA[is.na(lefser_iter_tb_nonNA)] <- 0
+
+lefser_iter_tb_nonNA$mean <- apply(lefser_iter_tb_nonNA[2:11], 1, mean)
+lefser_iter_tb_nonNA$sd <- apply(lefser_iter_tb_nonNA[2:11], 1, sd)
+```
+
+```{r}
+# ## Most erroneous features
+# lefser_iter_tb_sub <- lefser_iter_tb_nonNA[order(lefser_iter_tb_nonNA$sd, decreasing = TRUE)[1:20],]
+# lefser_iter_tb_sub$feature <- factor(lefser_iter_tb_sub$feature, level = lefser_iter_tb_sub$feature)
+# ggplot(lefser_iter_tb_sub, aes(x = feature, y = mean)) +
+#     geom_bar(stat = "identity") +
+#     geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2) +
+#     theme(axis.text.x = element_blank())
+
+## All features
+lvs <- lefser_iter_tb_nonNA$feature[order(lefser_iter_tb_nonNA$mean, decreasing = TRUE)]
+lefser_iter_tb_nonNA$feature <- factor(lefser_iter_tb_nonNA$feature, level = lvs)
+ggplot(lefser_iter_tb_nonNA, aes(x = feature, y = mean)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd), width = 0.2, col = "red") +
+    theme(axis.text.x = element_blank())
+```
+
+
+# LEfSe vs. lefser
+## Standard deviations
+```{r}
+summary(LEfSe_iter_tb_nonNA$sd)
+summary(lefser_iter_tb_nonNA$sd)
+```
+
+## Check FP and FN
+There is no FPs and two FNs.
+```{r}
+lefser_features <- lefser_iter_tb_nonNA$feature
+LEfSe_features <- LEfSe_iter_tb_nonNA$feature %>% gsub("\\.", "|", .)
+
+length(intersect(lefser_features, LEfSe_features))
+FN_features <- setdiff(LEfSe_features, lefser_features)
+```
+

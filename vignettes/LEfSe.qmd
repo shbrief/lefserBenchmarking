@@ -21,11 +21,73 @@ knitr::opts_chunk$set(comment = "#>",
                       eval = FALSE)
 ```
 
-
+# Setup
+## Docker
 ```{bash}
 ## Start the LEfSe docker
 docker run -it biobakery/lefse bash
 ```
+
+## gsutil
+Install gsutil following this: https://cloud.google.com/storage/docs/gsutil_install#linux 
+
+## data
+Copy the input data to Google Cloud bucket
+```{bash eval=FALSE}
+/home/linuxbrew/google-cloud-sdk/bin/gsutil mb gs://lefser
+```
+
+```{r eval=FALSE}
+AnVIL::gsutil_cp("~/Projects/MicrobiomeBenchmarkDataLefse/inst/extdata/gingivalplaque.txt", "gs://lefser")
+```
+
+# gingival data
+```{bash}
+mkdir gingival
+cd gingival
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp gs://lefser/gingivalplaque.txt .
+
+/home/linuxbrew/.linuxbrew/bin/format_input.py gingivalplaque.txt gingivalplaque.in -c 1 -s -1 -u 2 -o 1000000
+
+ath=0.01
+wth=0.01
+ldath=3
+
+touch gingivalplaque\_a"$ath"\_w"$wth"\_lda"$ldath".log
+exec 1> >(tee gingivalplaque\_a"$ath"\_w"$wth"\_lda"$ldath".log)
+
+i=5
+while [ $i -le 100 ]
+do
+    bp=$((i))
+    echo "Running iteration $i with bootstrap $bp..."
+    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -a "$ath" -w "$wth" -l "$ldath" -b "$bp" gingivalplaque.in "gingivalplaque_a${ath}_w${wth}_lda${ldath}_bp${bp}.res"
+    i=$((i + 5))
+done
+```
+
+```{bash iteration_version_upload}
+## Iteration version
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r gingivalplaque* gs://lefser/gingival_iter
+```
+
+```{r}
+library(AnVIL)
+gsutil_cp("gs://lefser/gingival_iter", 
+          "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations/LEfSe", 
+          recursive = TRUE)
+```
+
+```{r iteration_version_download, echo=FALSE}
+# AnVILGCP::avlist("gs://sh_misc/mice_rag2")
+
+## Iteration version
+library(AnVIL)
+gsutil_cp("gs://sh_misc/mice_rag2_iter/*", 
+          "~/Projects/lefserBenchmarking/data/LEfSe_Outputs_Iterations/", 
+          recursive = TRUE)
+```
+
 
 # mice_rag2 data example
 This is the dataset used in the Figure 3 of the LEfSe paper 
@@ -46,17 +108,28 @@ I reference this answer: https://forum.biobakery.org/t/lefse-galaxy-and-conda-co
 /home/linuxbrew/.linuxbrew/bin/plot_cladogram.py mice_rag2.res mice_rag2.svg --format svg
 ```
 
+```{bash iteration_version_run, echo=FALSE}
+## Iteration version
+/home/linuxbrew/.linuxbrew/bin/format_input.py mice_rag2.txt mice_rag2.in -c 1 -s -1 -u -1 -o 1000000
 
-
-Install gsutil following this: https://cloud.google.com/storage/docs/gsutil_install#linux 
-```{bash}
-/home/linuxbrew/google-cloud-sdk/bin/gsutil ls
+i=1
+while [ $i -le 10 ]
+do
+    bp=$(( 30 + ($i * 10 )))
+    echo Running iteration $i 
+    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -b $bp mice_rag2.in mice_rag2\_it"$i"\_bp"$bp".res -a 0.01 -l 2
+    i=$(( $i + 1 ))
+done
 ```
 
 ```{bash}
 ## Copy the results to Google Cloud bucket
-cd ..
-/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2 gs://sh_misc
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2 gs://sh_misc/mice_rag2
+```
+
+```{bash iteration_version_upload, echo=FALSE}
+## Iteration version
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2* gs://sh_misc/mice_rag2_iter
 ```
 
 ```{r}
@@ -65,6 +138,17 @@ gsutil_cp("gs://sh_misc/mice_rag2",
           "~/Projects/lefserBenchmark/data/LEfSe_Outputs", 
           recursive = TRUE)
 ```
+
+```{r iteration_version_download, echo=FALSE}
+# AnVILGCP::avlist("gs://sh_misc/mice_rag2")
+
+## Iteration version
+library(AnVIL)
+gsutil_cp("gs://sh_misc/mice_rag2_iter/*", 
+          "~/Projects/lefserBenchmarking/data/LEfSe_Outputs_Iterations/", 
+          recursive = TRUE)
+```
+
 
 # Zeller data from the lefser package
 

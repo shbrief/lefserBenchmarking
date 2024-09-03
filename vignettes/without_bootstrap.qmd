@@ -27,6 +27,7 @@ suppressPackageStartupMessages({
     library(lefserBenchmarking)
     library(grid)
     library(VennDiagram)
+    library(dplyr)
 })
 ```
 
@@ -63,24 +64,27 @@ lefserPlot(res2, title = "With Bootstrap")
 ## Venn diagram
 ```{r message=FALSE}
 library(dplyr)
-lefser_output1 <- res1 %>% 
-    mutate(app_name = 'lefser') %>% 
+
+## With Bootstrap
+lefser_output1 <- res1 %>%
+    mutate(algorithm = 'with_bootstrap') %>% 
     arrange(scores) %>% 
-    rename(feature = Names, lefser_LDA = scores)
+    dplyr::rename(feature = Names, lefser_LDA = scores)
 lefser_output1$feature <- lapply(lefser_output1$feature, function(x) {
     strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
 
+## Without Bootstrap
 lefser_output2 <- res2 %>% 
-    mutate(app_name = 'lefser') %>% 
+    mutate(algorithm = 'without_bootstrap') %>% 
     arrange(scores) %>% 
-    rename(feature = Names, lefser_LDA = scores)
+    dplyr::rename(feature = Names, lefser_LDA = scores)
 lefser_output2$feature <- lapply(lefser_output2$feature, function(x) {
     strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
 ```
 
 ```{r}
-set1 <- lefser_output1$feature
-set2 <- lefser_output2$feature
+set1 <- lefser_output1$feature # with bootstrap
+set2 <- lefser_output2$feature # without bootstrap
 
 grid.newpage()
 venn_object <- venn.diagram(
@@ -90,6 +94,29 @@ venn_object <- venn.diagram(
 )
 grid.draw(venn_object)
 ```
+
+
+## LDA comparison
+```{r}
+## Differences in biomarker order
+lda1 <- lefser_output1 %>%
+    filter(feature != setdiff(set1, set2)) %>%
+    select(feature, lefser_LDA) %>%
+    dplyr::rename(LDA_w_bs = lefser_LDA) %>%
+    arrange(LDA_w_bs)
+lda2 <- lefser_output2 %>%
+    select(feature, lefser_LDA) %>%
+    dplyr::rename(LDA_wo_bs = lefser_LDA) %>%
+    arrange(LDA_wo_bs)   
+table(lda1$feature == lda2$feature)
+
+## Difference in LDA scores
+lda12 <- dplyr::full_join(lda1, lda2, by = "feature")
+lad12_diff <- abs(lda12$LDA_w_bs - lda12$LDA_wo_bs)
+mean(lad12_diff)
+sd(lad12_diff)
+```
+
 
 ## Speed
 ```{r}

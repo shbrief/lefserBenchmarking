@@ -25,7 +25,10 @@ suppressPackageStartupMessages({
     library(lefser)
     library(microbiomeMarker)
     library(dplyr)
+    library(ggplot2)
     library(lefserBenchmarking)
+    library(grid)
+    library(VennDiagram)
 })
 
 projDir <- "~/Projects/lefserBenchmarking"
@@ -62,6 +65,12 @@ mice_se <- SummarizedExperiment(
 )
 ```
 
+```{r eval=FALSE, echo=FALSE}
+# Subset to terminal nodes
+tn <- get_terminal_nodes(rownames(mice_se))
+mice_se <- mice_se[tn,]
+```
+
 ```{r}
 set.seed(1982)
 res <- lefser(relativeAb(mice_se), 
@@ -74,8 +83,8 @@ lefserPlot(res)
 
 # Run microbiomeMarker
 ```{r}
-mice_ps <- mia::makePhyloseqFromTreeSE(mice_se, 
-                                       assay.type = "relative_abundance")
+mice_ps <- mia::convertToPhyloseq(mice_se, 
+                                  assay.type = "relative_abundance")
 set.seed(1982)
 mm_lefse <- run_lefse(
     mice_ps,
@@ -94,7 +103,7 @@ plot_ef_bar(mm_lefse)
 lefser_output <- res %>% 
     mutate(app_name = 'lefser') %>% 
     arrange(scores) %>% 
-    rename(feature = Names, lefser_LDA = scores)
+    dplyr::rename(lefser_LDA = scores)
 lefser_output$feature <- lapply(lefser_output$feature, function(x) {
     strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
 
@@ -131,6 +140,8 @@ mm_output$feature <- lapply(mm_output$feature, function(x) {
 
 head(mm_output)
 ```
+
+
 
 ## Plot
 ```{r}
@@ -172,6 +183,27 @@ venn_object <- venn.diagram(
 )
 grid.draw(venn_object)
 ```
+
+```{r LDA_comparison, echo=FALSE, eval=FALSE}
+## Differences in biomarker order
+lda_lefser <- lefser_output %>%
+    filter(feature %in% intersect(set1, set2)) %>%
+    select(feature, lefser_LDA) %>%
+    arrange(lefser_LDA)
+lda_lefse <- lefse_docker %>%
+    filter(feature %in% intersect(set1, set2)) %>%
+    select(feature, lefse_docker_LDA) %>%
+    dplyr::rename(lefse_LDA = lefse_docker_LDA) %>%
+    arrange(lefse_LDA)   
+table(lda_lefser$feature == lda_lefse$feature)
+
+## Difference in LDA scores
+lda_all <- dplyr::full_join(lda_lefser, lda_lefse, by = "feature")
+lad_all_diff <- abs(abs(lda_all$lefser_LDA) - abs(lda_all$lefse_LDA))
+mean(lad_all_diff)
+sd(lad_all_diff)
+```
+
 
 
 # SessionInfo

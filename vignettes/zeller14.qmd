@@ -79,6 +79,7 @@ head(lefse_docker)
 
 
 ## From Galaxy
+The LEfSe result from Galaxy is available [here](https://github.com/sdgamboa/lefse_comparison).
 ```{r}
 col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_galaxy_LDA', 'pval')
 lefse_galaxy <- readr::read_tsv(
@@ -94,6 +95,7 @@ head(lefse_galaxy)
 
 
 ## From Conda
+The LEfSe result from Conda is available [here](https://github.com/sdgamboa/lefse_comparison).
 ```{r}
 col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_conda_LDA', 'pval')
 lefse_conda <- readr::read_tsv(

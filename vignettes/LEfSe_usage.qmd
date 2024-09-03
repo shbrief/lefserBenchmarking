@@ -1,0 +1,28 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+library(bugsigdbr)
+bsdb <- importBugSigDB("devel") # the most current BugSigDB
+```
+
+```{r}
+ind <- grep("LEfSe", bsdb$`Statistical test`)
+a <- length(unique(bsdb$PMID)) # the number of studies
+b <- length(unique(bsdb$PMID[ind])) # the number of LEfSe-using studies
+
+ind2 <- grep("Wilcoxon", bsdb$`Statistical test`)
+c <- length(unique(bsdb$PMID[ind2])) # the number of Wilcoxon-using studies
+
+ind3 <- grep("LEfSe|Wilcoxon", bsdb$`Statistical test`)
+d <- length(unique(bsdb$PMID[ind3])) # the number of studies using LEfSe or Wilcoxon
+```
+
+```{r}
+paste0(round(d/a*100, 2), "% of studies using Wilcoxon method")
+paste0(round(b/d*100, 2), "% of the Wilcoxon method were applied via LEfSe.")
+paste0(round(b/a*100, 2), "% of studies using LEfSe method.")
+```

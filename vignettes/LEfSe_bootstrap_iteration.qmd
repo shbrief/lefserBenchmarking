@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+## LEfSe results from Docker
+LEfSeDatDir <- "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations/LEfSe/gingival_iter/"
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'LDA', 'pval')
+fnames <- list.files(LEfSeDatDir) %>% .[grep(".res", .)]
+
+## Order by the number of iterations
+bp_values <- as.numeric(sub(".*bp(\\d+)\\.res", "\\1", fnames))
+ordered_fnames <- fnames[order(bp_values)]
+
+## A list of 10 LEfSe iterations
+LEfSeResAll <- as.list(vector(length = 10))
+for (i in seq_along(ordered_fnames)) {
+    
+    iter <- sub(".*bp(\\d+)\\.res", "\\1", ordered_fnames[i])
+    res <- readr::read_tsv(
+        file.path(LEfSeDatDir, ordered_fnames[i]), col_names = FALSE, show_col_types = FALSE) %>% 
+        magrittr::set_colnames(col_names) %>% 
+        filter(!is.na(LDA))
+    
+    res$feature <- lapply(res$feature, function(x) {
+        strsplit(x, "\\.") %>% unlist %>% tail(., 1) %>% 
+            gsub("t__|c__|f__|s__|p__|o__|g__", "", .)}) %>% unlist
+    
+    LEfSeResAll[[i]] <- res
+    names(LEfSeResAll)[i] <- paste0("iter_", iter)
+}
+
+## Combine LDA scores 
+LEfSe_iter_tb <- LEfSeResAll[[1]][c("feature", "LDA")] %>% 
+    magrittr::set_colnames(c("feature", paste0("LDA_", names(LEfSeResAll)[1])))
+
+for (i in 2:length(LEfSeResAll)) {
+    sub <- LEfSeResAll[[i]][c("feature", "LDA")] %>% 
+        magrittr::set_colnames(c("feature", paste0("LDA_", names(LEfSeResAll)[i])))
+    LEfSe_iter_tb <- dplyr::full_join(x = LEfSe_iter_tb, y = sub, by = "feature")
+}
+
+LEfSe_iter_tb_nonNA <- LEfSe_iter_tb
+LEfSe_iter_tb_nonNA[is.na(LEfSe_iter_tb_nonNA)] <- 0
+
+## Calculate mean and sd of iterations
+LEfSe_iter_tb_nonNA$mean <- apply(LEfSe_iter_tb_nonNA[-1], 1, mean)
+LEfSe_iter_tb_nonNA$sd <- apply(LEfSe_iter_tb_nonNA[-1], 1, sd)
+
+## Save
+write.csv(LEfSe_iter_tb_nonNA,
+          "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations/LEfSe_28iters.csv",
+          row.names = FALSE)
+```
+
+Convert taxon name to genus
+```{r}
+prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv")
+genus <- prior_info %>%
+    select(features, new_names, taxon_annotation, genus)
+```
+
+```{r}
+## All the features
+dat <- tibble::column_to_rownames(LEfSe_iter_tb_nonNA, "feature") %>% 
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., genus, by = "features")
+
+ggplot(dat) +
+  geom_line(aes(iter, LDA, colour = new_names)) +
+    theme(legend.position = "bottom") +
+    labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
+         x = "# of Bootstrap Iterations")
+```
+
+```{r}
+## All the features detected all times
+always_detected_features <- which(rowSums(LEfSe_iter_tb_nonNA == 0) == 0)
+LEfSe_iter_always_detected <- LEfSe_iter_tb_nonNA[always_detected_features,]
+dat2 <- tibble::column_to_rownames(LEfSe_iter_always_detected, "feature") %>% 
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., genus, by = "features")
+
+ggplot(dat2) +
+  geom_line(aes(iter, LDA, colour = new_names)) +
+    ylim(2.8, 4) +
+    theme(legend.position="bottom")
+ggsave("Figures/lefse_iter.png")
+```
+
+```{r}
+
+```
+
+```{r}
+## The features detected only a few times
+sometimes_detected_features <- which(rowSums(LEfSe_iter_tb_nonNA == 0) != 0)
+LEfSe_iter_sometimes_detected <- LEfSe_iter_tb_nonNA[sometimes_detected_features,]
+dat3 <- tibble::column_to_rownames(LEfSe_iter_sometimes_detected, "feature") %>% 
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., genus, by = "features")
+
+ggplot(dat3) +
+  geom_line(aes(iter, LDA, colour = new_names)) +
+    theme(legend.position="bottom")
+```
+
+```{r}
+unique(dat$genus) # LEfSe_iter_all_detected
+unique(dat$taxon_annotation)
+unique(dat2$genus) # LEfSe_iter_always_detected
+unique(dat2$taxon_annotation)
+```
+
