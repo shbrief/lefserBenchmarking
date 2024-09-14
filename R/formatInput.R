@@ -4,7 +4,7 @@
 #'
 #' @import phyloseq
 #' @import SummarizedExperiment
-#' @importFrom mia makePhyloseqFromTreeSE
+#' @importFrom mia convertToPhyloseq
 #'
 #' @param dat A microbiome abundance data. It can be a data frame (an input
 #' format for LEfSe's `run_lefse.py` function), `SummarizedExperiment`, or
@@ -63,7 +63,7 @@ formatInput <- function(dat, format_to, addOTU = TRUE) {
         )
 
         ## Use the mia package for conversion
-        ps <- mia::makePhyloseqFromTreeSE(se, assay.type = "exprs")
+        ps <- mia::convertToPhyloseq(se, assay.type = "exprs")
         return(ps)
     }
 
