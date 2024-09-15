@@ -1,0 +1,231 @@
+---
+title: "Effect of Bootstrap in LEfSe on Reproducibility"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Bootstrap and Reproducibility}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(ggbreak)
+    library(dplyr)
+    library(ggplot2)
+})
+```
+
+# Data
+## LEfSe Bootstrap Iterations
+```{r eval=FALSE}
+wd <- "~/Projects/lefserBenchmarking/vignettes/gingival/data"
+LEfSeDatDir <- file.path(wd, "LEfSe_Bootstrap_Iterations")
+LEfSe_iter_tb_nonNA <- getLEfSeIterSummary(LEfSeDatDir, 20)
+
+## Save
+write.csv(LEfSe_iter_tb_nonNA,
+          file.path(wd, "LEfSe_20iters.csv"), # used relative abundance
+          row.names = FALSE)
+```
+
+```{r echo=FALSE, message=FALSE}
+wd <- "~/Projects/lefserBenchmarking/vignettes/gingival/data"
+LEfSe_iter_tb_nonNA <- readr::read_csv(file.path(wd, "LEfSe_20iters.csv"))
+```
+
+## lefser
+```{r}
+lefser <- readr::read_csv(file.path(wd, "gingival_a0.01_w0.01_lda3_lefser.csv"))
+```
+
+## Convert taxon name to most_specific_taxa
+```{r message=FALSE}
+prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv")
+most_specific_taxa <- prior_info %>%
+    select(features, new_names, taxon_annotation, most_specific_taxa)
+```
+
+# Results
+## Summary
+```{r}
+lefser_reformat <- lefser %>%
+    rename(feature = features, lefser_LDA = scores) %>% 
+    mutate(feature = gsub("_", "", feature) %>% gsub("\\.", "", .)) %>%
+    select(feature, lefser_LDA)
+
+num_detected <- rowSums(LEfSe_iter_tb_nonNA[2:21] != 0)
+lefse_reformat <- LEfSe_iter_tb_nonNA %>%
+    mutate(num_detected = num_detected) %>% 
+    select(feature, LDA_iter_5, LDA_iter_30, LDA_iter_100, num_detected)
+
+summary <- dplyr::full_join(lefse_reformat, lefser_reformat, by = "feature")
+summary[summary == 0] <- NA
+head(summary)
+```
+
+## Supplementary Table 1
+```{r Sup_Table_1}
+## Full iteration results
+tax_annot <- prior_info %>% select(-new_names)
+
+num_detected <- rowSums(LEfSe_iter_tb_nonNA[2:21] != 0)
+supTb <- LEfSe_iter_tb_nonNA %>%
+    mutate(num_detected = num_detected) %>%
+    dplyr::full_join(., lefser_reformat, by = "feature") %>%
+    dplyr::rename(features = feature) %>%
+    dplyr::left_join(., tax_annot, by = "features") %>%
+    dplyr::select(!c(features, mean, sd)) %>%
+    dplyr::relocate(taxon_name, .before = LDA_iter_5)
+```
+
+```{r eval=FALSE}
+## Save: Supplementary Table 1
+write.csv(supTb, 
+          "~/Projects/lefserBenchmarking/vignettes/Tables/gingival_bootstrap_iterations.csv", 
+          row.names = FALSE) 
+```
+
+
+# Plot
+## All the features
+```{r}
+## All the features
+dat <- tibble::column_to_rownames(LEfSe_iter_tb_nonNA, "feature") %>% 
+    select(-c(mean, sd)) %>%
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., most_specific_taxa, by = "features")
+
+ggplot(dat) +
+  geom_line(aes(iter, LDA, colour = new_names)) +
+    theme(legend.position = "none") +
+    labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
+         subtitle = "25 features detected during iterations",
+         x = "# of Bootstrap Iterations")
+ggsave("Figures/SupFig2A_LEfSe_25features.png")
+```
+
+## 17 features detected all times 
+```{r}
+## All the features detected all times
+always_detected_features <- which(rowSums(LEfSe_iter_tb_nonNA == 0) == 0)
+LEfSe_iter_always_detected <- LEfSe_iter_tb_nonNA[always_detected_features,]
+dat2 <- tibble::column_to_rownames(LEfSe_iter_always_detected, "feature") %>% 
+    select(-c(mean, sd)) %>%
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., most_specific_taxa, by = "features")
+
+ggplot(dat2) +
+    geom_line(aes(iter, LDA, col = new_names), show.legend = FALSE) +
+    ylim(3, 3.6) +
+    theme(legend.position = "bottom") +
+    theme_bw() +
+    labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
+         subtitle = "17 features detected at all times",
+         x = "# of Bootstrap Iterations")
+ggsave("Figures/SupFig2B_LEfSe_17features.png")
+```
+
+### LDA 
+Plot some of the bootstrap iterations with lefser
+```{r}
+## Format for plotting
+tb <- summary %>%
+    select(-num_detected) %>%
+    na.omit() %>%
+    data.table::melt(., id = "feature")
+
+ggplot() + 
+    geom_bar(data = tb, 
+             aes(x = feature, y = abs(value), fill = variable), 
+             position = "dodge", stat = "identity") +
+    scale_y_break(c(0.3, 3)) +
+    scale_fill_discrete(name = "") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+    scale_fill_manual(values = c("red", "orange", "yellow", "blue")) +
+    labs(title = "Reproducibility of LDA scores",
+         subtitle = "17 features detected at all times",
+         y = "abs(LDA score)", x = "")
+```
+
+
+
+```{r eval=FALSE, echo=FALSE}
+## Group color per most_specific_taxa
+## Create mapping for new_names to color depends on most_specific_taxa
+mapping <- dat2 %>% distinct(most_specific_taxa, new_names) %>% mutate(cols = NA)
+most_specific_taxa_cols <- RColorBrewer::brewer.pal(length(unique(mapping$most_specific_taxa)), "Set1")
+unique_most_specific_taxa <- unique(mapping$most_specific_taxa)
+
+for (j in seq_along(most_specific_taxa_cols)) {
+    most_specific_taxa_ind <- which(mapping$most_specific_taxa == unique_most_specific_taxa[j])
+    mapping$cols[most_specific_taxa_ind] <- most_specific_taxa_cols[j]
+}
+
+plot_cols <- as.vector(mapping$cols)
+names(plot_cols) <- as.vector(mapping$new_names)
+
+ggplot(dat2) +
+    geom_line(aes(iter, LDA, col = new_names)) +
+    ylim(3, 3.6) +
+    theme(legend.position = "bottom") +
+    labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
+         subtitle = "17 features detected at all times",
+         x = "# of Bootstrap Iterations") +
+    scale_color_manual(values = plot_cols)
+```
+
+
+## 7 features sometimes detected 
+```{r}
+## The features detected only a few times
+sometimes_detected_features <- which(rowSums(LEfSe_iter_tb_nonNA == 0) != 0)
+LEfSe_iter_sometimes_detected <- LEfSe_iter_tb_nonNA[sometimes_detected_features,]
+
+dat3 <- tibble::column_to_rownames(LEfSe_iter_sometimes_detected, "feature") %>% 
+    select(-c(mean, sd)) %>%
+    t %>%
+    as.data.frame() %>%
+    mutate(iter = as.numeric(gsub("LDA_iter_", "", rownames(.)))) %>%
+    tidyr::gather(., "features", "LDA", -iter) %>%
+    dplyr::left_join(., most_specific_taxa, by = "features")
+
+ggplot(dat3) +
+  geom_line(aes(iter, LDA, colour = new_names)) +
+    theme(legend.position="bottom")
+```
+
+## Features
+```{r}
+unique(dat$most_specific_taxa) # LEfSe_iter_all_detected
+unique(dat$taxon_annotation)
+unique(dat2$most_specific_taxa) # LEfSe_iter_always_detected
+unique(dat2$taxon_annotation)
+```
+
+
+# SessionInfo
+
+<details>
+```{r}
+sessionInfo()
+```
+</details>
