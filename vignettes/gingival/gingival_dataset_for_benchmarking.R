@@ -43,3 +43,6 @@ selected_samples <- col_data_subset |>
     pull(sample_name)
 tse_subset <- tse[, selected_samples]
 tse_subset <- filterTaxa(tse_subset)
+
+## Save
+saveRDS(tse_subset, "data/gingival_dataset_for_benchmarking.rds")

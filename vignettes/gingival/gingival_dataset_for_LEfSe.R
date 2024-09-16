@@ -1,4 +1,4 @@
-source("get_gingival_dataset.R")
+tse_subset <- readRDS("data/gingival_dataset_for_benchmarking.rds")
 tse_subset <- relativeAb(tse_subset) # relative abundance
 
 ## Count part of the table
