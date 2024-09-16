@@ -29,26 +29,47 @@ docker run -it biobakery/lefse bash
 ```
 
 ## gsutil
-Install gsutil following this: https://cloud.google.com/storage/docs/gsutil_install#linux 
+Install `gsutil` following this: https://cloud.google.com/storage/docs/gsutil_install#linux 
 
-## data
+
+
+# Gingival dataset
+## Data
 Copy the input data to Google Cloud bucket
-```{bash eval=FALSE}
-/home/linuxbrew/google-cloud-sdk/bin/gsutil mb gs://lefser
-```
-
-```{r eval=FALSE}
-AnVIL::gsutil_cp("~/Projects/MicrobiomeBenchmarkDataLefse/inst/extdata/gingivalplaque.txt", "gs://lefser")
-```
-
-# gingival data
 ```{bash}
 mkdir gingival
 cd gingival
-/home/linuxbrew/google-cloud-sdk/bin/gsutil cp gs://lefser/gingivalplaque.txt .
 
-/home/linuxbrew/.linuxbrew/bin/format_input.py gingivalplaque.txt gingivalplaque.in -c 1 -s -1 -u 2 -o 1000000
+curl https://raw.githubusercontent.com/shbrief/lefserBenchmarking/main/vignettes/gingival/data/gingivalplaque_ra.txt > gingival.txt
+/home/linuxbrew/.linuxbrew/bin/format_input.py gingival.txt gingival.in -c 1 -s -1 -u 2 -o 1000000
+```
 
+## Single run
+- With the default boostrap iterations (n = 30)
+- Using Kruskal Wallis test threshold = 0.05 and LDA cutoff = 2
+
+```{bash single_run}
+ath=0.05
+wth=0.05
+ldath=2
+
+/home/linuxbrew/.linuxbrew/bin/run_lefse.py -a "$ath" -w "$wth" -l "$ldath" gingival.in "gingival_a${ath}_w${wth}_lda${ldath}_LEfSe.res"
+
+## Copy the results to Google Cloud bucket
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r gingival gs://lefser/gingival_ra_iter
+```
+
+Download the results from Google Drive
+```{r}
+library(AnVIL)
+gsutil_cp("gs://lefser/gingival_ra_iter/gingival_a0.05_w0.05_lda2_LEfSe.res", 
+          "~/Projects/lefserBenchmarking/vignettes/gingival/data", 
+          recursive = TRUE)
+```
+
+## Bootstrap Iterations
+Bootstrap iterations from 5 to 100 (increasing by 5)
+```{bash iterations}
 ath=0.01
 wth=0.01
 ldath=3
@@ -61,35 +82,27 @@ while [ $i -le 100 ]
 do
     bp=$((i))
     echo "Running iteration $i with bootstrap $bp..."
-    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -a "$ath" -w "$wth" -l "$ldath" -b "$bp" gingivalplaque.in "gingivalplaque_a${ath}_w${wth}_lda${ldath}_bp${bp}.res"
+    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -a "$ath" -w "$wth" -l "$ldath" -b "$bp" gingival.in "gingival_a${ath}_w${wth}_lda${ldath}_bp${bp}.res"
     i=$((i + 5))
 done
+
+## Copy the results to Google Cloud bucket
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r gingival* gs://lefser/gingival_ra_iter
 ```
 
-```{bash iteration_version_upload}
-## Iteration version
-/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r gingivalplaque* gs://lefser/gingival_iter
-```
-
+Download the results from Google Drive
 ```{r}
 library(AnVIL)
-gsutil_cp("gs://lefser/gingival_iter", 
-          "~/Projects/lefserBenchmarking/data/gingival_Outputs_Iterations/LEfSe", 
-          recursive = TRUE)
-```
-
-```{r iteration_version_download, echo=FALSE}
-# AnVILGCP::avlist("gs://sh_misc/mice_rag2")
-
-## Iteration version
-library(AnVIL)
-gsutil_cp("gs://sh_misc/mice_rag2_iter/*", 
-          "~/Projects/lefserBenchmarking/data/LEfSe_Outputs_Iterations/", 
+gsutil_cp("gs://lefser/gingival_ra_iter/*", 
+          "~/Projects/lefserBenchmarking/vignettes/gingival/data/LEfSe_Bootstrap_Iterations/", 
           recursive = TRUE)
 ```
 
 
-# mice_rag2 data example
+
+
+# Mice data
+## Data
 This is the dataset used in the Figure 3 of the LEfSe paper 
 ```{bash}
 ## Make a directory for a given data
@@ -97,8 +110,12 @@ mkdir mice_rag2
 cd mice_rag2
 
 ## Download sample data
-curl https://raw.githubusercontent.com/shbrief/lefserBenchmark/main/data/LEfSe_Inputs/mice_rag2.txt?token=GHSAT0AAAAAACHEXOIPYMYBYGF2S4LGKMAWZQTRD2Q > mice_rag2.txt
+curl https://raw.githubusercontent.com/shbrief/lefserBenchmarking/refs/heads/main/vignettes/mice/data/mice_rag2.txt > mice_rag2.txt
 ```
+
+## Single run
+- With the default boostrap iterations (n = 30)
+- Using Kruskal Wallis test threshold = 0.01 and LDA cutoff = 2
 
 I reference this answer: https://forum.biobakery.org/t/lefse-galaxy-and-conda-codes/6099 
 ```{bash}
@@ -106,68 +123,75 @@ I reference this answer: https://forum.biobakery.org/t/lefse-galaxy-and-conda-co
 /home/linuxbrew/.linuxbrew/bin/run_lefse.py mice_rag2.in mice_rag2.res -a 0.01 -l 2
 /home/linuxbrew/.linuxbrew/bin/plot_res.py mice_rag2.res mice_rag2.res.svg --format svg
 /home/linuxbrew/.linuxbrew/bin/plot_cladogram.py mice_rag2.res mice_rag2.svg --format svg
+
+## Copy the results to Google Cloud bucket
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2 gs://sh_misc/mice_rag2
 ```
 
-```{bash iteration_version_run, echo=FALSE}
+Download the results from Google Drive
+```{r}
+library(AnVIL)
+gsutil_cp("gs://sh_misc/mice_rag2", 
+          "~/Projects/lefserBenchmarking/vignettes/mice/data/", 
+          recursive = TRUE)
+```
+
+## Bootstrap iteration
+```{bash mice_iteration_version_run, echo=FALSE}
 ## Iteration version
 /home/linuxbrew/.linuxbrew/bin/format_input.py mice_rag2.txt mice_rag2.in -c 1 -s -1 -u -1 -o 1000000
 
 i=1
 while [ $i -le 10 ]
 do
-    bp=$(( 30 + ($i * 10 )))
+    bp=$(( 20 + ($i * 10 )))
     echo Running iteration $i 
-    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -b $bp mice_rag2.in mice_rag2\_it"$i"\_bp"$bp".res -a 0.01 -l 2
+    /home/linuxbrew/.linuxbrew/bin/run_lefse.py -b $bp mice_rag2.in mice_rag2\_bp"$bp".res -a 0.01 -l 2
     i=$(( $i + 1 ))
 done
-```
 
-```{bash}
 ## Copy the results to Google Cloud bucket
-/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2 gs://sh_misc/mice_rag2
-```
-
-```{bash iteration_version_upload, echo=FALSE}
-## Iteration version
 /home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r mice_rag2* gs://sh_misc/mice_rag2_iter
 ```
 
+Download the results from Google Drive
 ```{r}
 library(AnVIL)
-gsutil_cp("gs://sh_misc/mice_rag2", 
-          "~/Projects/lefserBenchmark/data/LEfSe_Outputs", 
-          recursive = TRUE)
-```
-
-```{r iteration_version_download, echo=FALSE}
-# AnVILGCP::avlist("gs://sh_misc/mice_rag2")
-
-## Iteration version
-library(AnVIL)
 gsutil_cp("gs://sh_misc/mice_rag2_iter/*", 
-          "~/Projects/lefserBenchmarking/data/LEfSe_Outputs_Iterations/", 
+          "~/Projects/lefserBenchmarking/vignettes/mice/data/", 
           recursive = TRUE)
 ```
 
 
-# Zeller data from the lefser package
+# CRC dataset
+Zeller14 data from the lefser package
 
 ```{bash zeller14_data}
+## Make a directory for a given data
+mkdir zeller14
+cd zeller14
+
 /home/linuxbrew/.linuxbrew/bin/format_input.py zeller14.txt zeller14.in -c 1 -s 2 -u 3 -o 1000000
 /home/linuxbrew/.linuxbrew/bin/run_lefse.py zeller14.in zeller14.res
 /home/linuxbrew/.linuxbrew/bin/plot_res.py zeller14.res zeller14.res.svg --format svg
 /home/linuxbrew/.linuxbrew/bin/plot_cladogram.py zeller14.res zeller14.svg --format svg
+
+## Copy the results to Google Cloud bucket
+cd ..
+/home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r zeller14* gs://sh_misc/zeller14
 ```
 
 ```{r}
 gsutil_cp("gs://sh_misc/zeller14", 
-          "~/Projects/lefserBenchmark/data/LEfSe_Outputs", 
+          "~/Projects/lefserBenchmarking/vignettes/zeller14/data", 
           recursive = TRUE)
 ```
 
-# kostic_crc data example
+
+
+# kostic_crc dataset
 This is the dataset provided in the microbiomeMarker package. 
-```{bash}
+```{bash eval=FALSE}
 ## Make a directory for a given data
 mkdir kostic_crc
 cd kostic_crc
@@ -175,23 +199,14 @@ cd kostic_crc
 ## Download sample data
 ## `kostic_crc.txt` containing the OTU in feature names
 curl https://raw.githubusercontent.com/shbrief/lefserBenchmarking/main/data/LEfSe_Inputs/kostic_crc.txt > kostic_crc.txt
-```
 
-```{bash eval=FALSE}
+## Run LEfSe
 /home/linuxbrew/.linuxbrew/bin/format_input.py kostic_crc.txt kostic_crc.in -c 1 -s -1 -u 2 -o 1000000
 /home/linuxbrew/.linuxbrew/bin/run_lefse.py kostic_crc.in kostic_crc.res -a 0.02 -l 3
 /home/linuxbrew/.linuxbrew/bin/plot_res.py kostic_crc.res kostic_crc.res.svg --format svg
 /home/linuxbrew/.linuxbrew/bin/plot_cladogram.py kostic_crc.res kostic_crc.svg --format svg
-```
 
-```{bash}
 ## Copy the results to Google Cloud bucket
 cd ..
 /home/linuxbrew/google-cloud-sdk/bin/gsutil cp -r kostic_crc gs://sh_misc
-```
-
-```{r}
-AnVIL::gsutil_cp("gs://sh_misc/kostic_crc", 
-                 "~/Projects/lefserBenchmarking/data/LEfSe_Outputs", 
-                 recursive = TRUE)
 ```
