@@ -48,7 +48,7 @@ LEfSe_iter_tb_nonNA <- readr::read_csv(file.path(wd, "LEfSe_20iters.csv"))
 
 ## lefser
 ```{r}
-lefser <- readr::read_csv(file.path(wd, "gingival_a0.01_w0.01_lda3_lefser.csv"))
+lefser <- readRDS(file.path(wd, "gingival_a0.01_w0.01_lda3_lefser.rds"))
 ```
 
 ## Convert taxon name to most_specific_taxa
@@ -164,6 +164,7 @@ ggplot() +
     labs(title = "Reproducibility of LDA scores",
          subtitle = "17 features detected at all times",
          y = "abs(LDA score)", x = "")
+ggsave("Figures/SupFig2C_LEfSe_lefser_17features.png")
 ```
 
 
