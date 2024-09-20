@@ -1,0 +1,240 @@
+---
+title: "Compare biomarkers from LEfSe, lefser, and MM: gingival data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Gingival dataset}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(dplyr)
+    library(lefser)
+    library(microbiomeMarker)
+    library(lefserBenchmarking)
+})
+```
+
+
+# Setup
+## Accessory function
+```{r adding_taxa_name_function}
+source("~/Projects/lefserBenchmarking/R/addTaxon.R")
+```
+
+## Prior info
+```{r}
+prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv") # taxon name
+```
+
+# Results
+## LEfSe
+### Strict thresholds
+```{r}
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_docker_LDA', 'pval')
+lefse_res <- readr::read_tsv(
+    "data/LEfSe_Bootstrap_Iterations/gingival_a0.01_w0.01_lda3_bp30.res",
+    col_names = FALSE, show_col_types = FALSE) %>% 
+    magrittr::set_colnames(col_names)
+```
+
+```{r}
+lefse_docker <- lefse_res %>% 
+    filter(!is.na(lefse_docker_LDA)) %>% 
+    mutate(lefse_galaxy_LDA = ifelse(class == "control", -lefse_docker_LDA, lefse_docker_LDA),
+           app_name = 'lefse_docker')
+
+lefse_docker$feature <- lapply(lefse_docker$feature, function(x) {
+    strsplit(x, "\\.") %>% unlist %>% tail(., 1)}) %>% unlist
+
+lefse_docker <- lefse_docker %>% dplyr::rename(features = feature)
+head(lefse_docker)
+```
+
+```{r}
+## Annotation summary per class
+lefse_tb <- addTaxon(lefse_docker, prior_info) # add annotation
+lefse_tb %>%
+    group_by(class, taxon_annotation) %>%
+    summarise(n = n())
+```
+
+#### Barplot
+```{r}
+## Format LEfSe results to plot using `lefserPlot` function
+lefse_docker_for_plot <- lefse_tb %>%
+    dplyr::mutate(direction = ifelse(class == "subgingival_plaque", 1, -1)) %>%
+    dplyr::mutate(scores = direction * lefse_docker_LDA) %>%
+    dplyr::select(most_specific_taxa, scores, taxon_annotation) %>%
+    dplyr::rename(features = most_specific_taxa)
+
+attributes(lefse_docker_for_plot)$groups <- c("supragingival_plaque", "subgingival_plaque")
+lefserPlot(lefse_docker_for_plot, color = "l")
+```
+
+#### Cladogram
+```{r}
+
+```
+
+
+### Permissive thresholds
+```{r}
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_docker_LDA', 'pval')
+lefse_res2 <- readr::read_tsv(
+    "data/gingival_a0.05_w0.05_lda2_LEfSe.res",
+    col_names = FALSE, show_col_types = FALSE) %>% 
+    magrittr::set_colnames(col_names)
+
+lefse_docker2 <- lefse_res2 %>% 
+    filter(!is.na(lefse_docker_LDA)) %>% 
+    mutate(lefse_galaxy_LDA = ifelse(class == "control", -lefse_docker_LDA, lefse_docker_LDA),
+           app_name = 'lefse_docker')
+
+lefse_docker2$feature <- lapply(lefse_docker2$feature, function(x) {
+    strsplit(x, "\\.") %>% unlist %>% tail(., 1)}) %>% unlist
+
+lefse_docker2 <- lefse_docker2 %>% dplyr::rename(features = feature)
+
+## Annotation summary per class
+lefse_tb2 <- addTaxon(lefse_docker2, prior_info) # add annotation
+lefse_tb2 %>%
+    group_by(class, taxon_annotation) %>%
+    summarise(n = n())
+```
+
+
+
+## lefser
+### Strict threshold
+```{r}
+lefser_res <- readRDS("data/gingival_a0.01_w0.01_lda3_lefser.rds")
+
+lefser_tb <- addTaxon(lefser_res, prior_info)
+lefser_inter <- lefser_tb %>%
+    dplyr::rename(otu = features, features = most_specific_taxa)
+
+lefserPlot(lefser_inter)
+```
+
+
+```{r}
+plot_group <- lefserPlotFeat(lefser_res, lefser_res$features[[1]])
+plot_group
+```
+
+```{r}
+lefser_summary <- lefser_inter %>%
+    mutate(class = ifelse(scores < 0, "supragingival", "subgingival")) %>%
+    group_by(class, taxon_annotation) %>%
+    summarise(n = n())
+lefser_summary
+```
+
+### Permissive threshold
+```{r}
+lefser_res2 <- readRDS("data/gingival_a0.05_w0.05_lda2_lefser.rds")
+
+lefser_summary2 <- lefser_res2 %>%
+    addTaxon(prior_info) %>%
+    mutate(class = ifelse(scores < 0, "supragingival", "subgingival")) %>%
+    group_by(class, taxon_annotation) %>%
+    summarise(n = n())
+lefser_summary2
+```
+   
+
+
+## microbiomeMarker 
+### Strict threshold
+```{r}
+mm_res <- readRDS("data/gingival_a0.01_w0.01_lda3_mm.rds")
+plot_ef_bar(mm_res)
+```
+
+```{r}
+## Format the output
+mm_inter <- marker_table(mm_res)
+class(mm_inter) <- NULL
+mm_tb <- as_tibble(mm_inter)[names(mm_inter)]
+mm_tb <- mm_tb %>%
+    dplyr::rename(features = feature) %>%
+    addTaxon(prior_info)
+
+## Summary
+mm_summary <- mm_tb %>%
+    group_by(enrich_group, taxon_annotation) %>%
+    summarise(n = n())
+mm_summary
+```
+
+### Permissive threshold
+```{r}
+mm_res2 <- readRDS("data/gingival_a0.05_w0.05_lda2_mm.rds")
+
+## Format the output
+mm_inter2 <- marker_table(mm_res2)
+class(mm_inter2) <- NULL
+mm_tb2 <- as_tibble(mm_inter2)[names(mm_inter2)]
+mm_tb2 <- mm_tb2 %>%
+    dplyr::rename(features = feature) %>%
+    addTaxon(prior_info)
+
+## Summary
+mm_summary2 <- mm_tb2 %>%
+    group_by(enrich_group, taxon_annotation) %>%
+    summarise(n = n())
+mm_summary2
+```
+
+# Comparison
+```{r}
+## Summary table of detected taxa
+lefse_annot <- data.frame(annotation = lefse_tb$taxon_annotation, tool = "LEfSe")
+lefser_annot <- data.frame(annotation = lefser_tb$taxon_annotation, tool = "lefser")
+mm_annot <- data.frame(annotation = mm_tb$taxon_annotation, tool = "MM")
+
+all_annot <- rbind(lefse_annot, lefser_annot, mm_annot)
+table(all_annot$tool, all_annot$annotation, useNA = "ifany") 
+```
+
+```{r echo=FALSE, eval=FALSE}
+## Summary table of detected annotation
+lefse_taxa <- data.frame(taxa = lefse_tb$most_specific_taxa, tool = "LEfSe")
+lefser_taxa <- data.frame(taxa = lefser_tb$most_specific_taxa, tool = "lefser")
+mm_taxa <- data.frame(taxa = mm_tb$most_specific_taxa, tool = "MM")
+
+all_taxa <- rbind(lefse_taxa, lefser_taxa, mm_taxa)
+all_taxa_tb <- table(all_taxa$tool, all_taxa$taxa, useNA = "ifany") 
+all_taxa_tb/rowSums(all_taxa_tb)
+```
+
+
+
+
+
+# Plot
+## Venn diagrams
+```{r}
+lefse_taxa <- unique(lefse_tb$most_specific_taxa)
+lefser_taxa <- unique(lefser_tb$most_specific_taxa)
+mm_taxa <- unique(mm_tb$most_specific_taxa)
+
+fit <- threeVennDiagram(lefse_taxa, lefser_taxa, mm_taxa)
+base::plot(fit, quantities = TRUE) 
+```
+
