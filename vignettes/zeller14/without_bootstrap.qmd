@@ -1,0 +1,147 @@
+---
+title: "Revised LDA - remove random noise and bootstrap"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Revised algorithm}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(lefser)
+    library(microbiomeMarker)
+    library(lefserBenchmarking)
+    library(grid)
+    library(VennDiagram)
+    library(dplyr)
+})
+```
+
+# Load data
+CRC dataset
+```{r load_zeller14}
+## Old cMD data in the lefser package
+data(zeller14)
+zeller14 <- zeller14[, zeller14$study_condition != "adenoma"]
+zeller14$study_condition <- factor(zeller14$study_condition,
+                                   levels = c("CRC", "control")) # re-levels
+zeller14_ra <- relativeAb(zeller14)
+```
+
+# Run lefser
+## Without bootstrap
+```{r zeller14_by_lefser}
+set.seed(1982)
+res1 <- lefser::lefser(zeller14_ra, 
+                       groupCol = "study_condition", 
+                       blockCol = "age_category")
+lefserPlot(res1, title = "Without Randomness")
+```
+
+## With bootstrap
+```{r}
+set.seed(1982)
+res2 <- lefserBenchmarking::lefserBS(zeller14_ra, 
+                                     groupCol = "study_condition", 
+                                     blockCol = "age_category")
+colnames(res2) <- c("features", "scores")
+lefserPlot(res2, title = "With Randomness")
+```
+
+# Comparison
+## Venn diagram
+```{r message=FALSE}
+library(dplyr)
+
+## With Bootstrap
+lefser_output1 <- res1 %>%
+    mutate(algorithm = 'without_bootstrap') %>% 
+    arrange(scores) %>% 
+    dplyr::rename(feature = features, lefser_LDA = scores)
+lefser_output1$feature <- lapply(lefser_output1$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+
+## Without Bootstrap
+lefser_output2 <- res2 %>% 
+    mutate(algorithm = 'with_bootstrap') %>% 
+    arrange(scores) %>% 
+    dplyr::rename(feature = features, lefser_LDA = scores)
+lefser_output2$feature <- lapply(lefser_output2$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+```
+
+```{r}
+set1 <- lefser_output1$feature # without bootstrap
+set2 <- lefser_output2$feature # with bootstrap
+
+fit <- twoVennDiagram(set1, set2, "Updated", "Original")
+base::plot(fit, quantities = TRUE) 
+```
+
+
+## LDA comparison
+```{r}
+## Differences in biomarker order
+lda1 <- lefser_output1 %>% # with bootstrap
+    # filter(feature != setdiff(set1, set2)) %>%
+    select(feature, lefser_LDA) %>%
+    dplyr::rename(LDA_w_bs = lefser_LDA) %>%
+    arrange(LDA_w_bs)
+lda2 <- lefser_output2 %>% # without bootstrap
+    select(feature, lefser_LDA) %>%
+    dplyr::rename(LDA_wo_bs = lefser_LDA) %>%
+    arrange(LDA_wo_bs)   
+table(lda1$feature == lda2$feature)
+
+## Difference in LDA scores
+lda12 <- dplyr::full_join(lda1, lda2, by = "feature")
+lda12_diff <- abs(lda12$LDA_w_bs - lda12$LDA_wo_bs)
+mean(lda12_diff, na.rm = TRUE)
+sd(lda12_diff, na.rm = TRUE)
+
+## LDA score ranges
+summary(abs(lda1$LDA_w_bs))
+summary(abs(lda2$LDA_wo_bs))
+```
+
+
+
+```{r speed, echo=FALSE, eval=FALSE}
+## Spped
+library(microbenchmark)
+comp <- microbenchmark(lefser::lefser(zeller14_ra, 
+                                      groupCol = "study_condition", 
+                                      blockCol = "age_category"),
+                       lefserBS(zeller14_ra, 
+                                 groupCol = "study_condition", 
+                                 blockCol = "age_category"),
+                       times = 10L)
+comp$expr <- c("With Bootstrap", "Without Bootstrap")
+
+comp
+boxplot(comp)
+```
+
+
+# SessionInfo
+
+<details>
+```{r}
+sessionInfo()
+```
+</details>
+
