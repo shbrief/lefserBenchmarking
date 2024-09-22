@@ -27,3 +27,29 @@ threeVennDiagram <- function(lefse_taxa, lefser_taxa, mm_taxa) {
     
     return(fit)
 }
+
+
+
+#' Create input for Venn Diagram plot by eulerr package
+#' 
+#' @importFrom eulerr euler
+#'
+#' @param input1 A character vector.
+#' @param input2 A character vector.
+#' @param name1 A character(1).
+#' @param name2 A character(1).
+#'
+#' @return An `euler` object ready for `plot` function.
+#' 
+#' @export
+twoVennDiagram <- function(input1, input2, name1 = "A", name2 = "B") {
+    
+    AB <- length(intersect(input1, input2))
+    
+    summary <- c(length(input1) -AB, length(input2) -AB, AB)
+    names(summary) <- c(name1, name2, paste0(name1, "&", name2))
+    
+    fit <- eulerr::euler(summary)
+    
+    return(fit)
+}
