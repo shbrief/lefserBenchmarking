@@ -50,6 +50,7 @@ res1 <- lefser::lefser(zeller14_ra,
                        groupCol = "study_condition", 
                        blockCol = "age_category")
 lefserPlot(res1, title = "Without Randomness")
+ggsave("Figures/SupFig1B_without_randomness.png")
 ```
 
 ## With bootstrap
@@ -60,6 +61,7 @@ res2 <- lefserBenchmarking::lefserBS(zeller14_ra,
                                      blockCol = "age_category")
 colnames(res2) <- c("features", "scores")
 lefserPlot(res2, title = "With Randomness")
+ggsave("Figures/SupFig1A_with_randomness.png")
 ```
 
 # Comparison
@@ -94,17 +96,18 @@ base::plot(fit, quantities = TRUE)
 
 
 ## LDA comparison
-```{r}
+```{r collapse=FALSE}
 ## Differences in biomarker order
-lda1 <- lefser_output1 %>% # with bootstrap
+lda1 <- lefser_output1 %>% # without bootstrap
     # filter(feature != setdiff(set1, set2)) %>%
     select(feature, lefser_LDA) %>%
-    dplyr::rename(LDA_w_bs = lefser_LDA) %>%
-    arrange(LDA_w_bs)
-lda2 <- lefser_output2 %>% # without bootstrap
-    select(feature, lefser_LDA) %>%
     dplyr::rename(LDA_wo_bs = lefser_LDA) %>%
-    arrange(LDA_wo_bs)   
+    arrange(LDA_wo_bs)
+lda2 <- lefser_output2 %>% # with bootstrap
+    select(feature, lefser_LDA) %>%
+    dplyr::rename(LDA_w_bs = lefser_LDA) %>%
+    arrange(LDA_w_bs)   
+
 table(lda1$feature == lda2$feature)
 
 ## Difference in LDA scores
@@ -114,8 +117,8 @@ mean(lda12_diff, na.rm = TRUE)
 sd(lda12_diff, na.rm = TRUE)
 
 ## LDA score ranges
-summary(abs(lda1$LDA_w_bs))
-summary(abs(lda2$LDA_wo_bs))
+summary(abs(lda1$LDA_wo_bs))
+summary(abs(lda2$LDA_w_bs))
 ```
 
 
