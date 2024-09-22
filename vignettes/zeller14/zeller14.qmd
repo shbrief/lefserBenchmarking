@@ -1,0 +1,153 @@
+---
+title: "Biomarker discoverty with Zeller_2014 data"
+author: "Sehyun Oh"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Zeller_2014 data}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = "#>", 
+                      collapse = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+```{r echo=FALSE}
+suppressPackageStartupMessages({
+    library(lefser)
+    library(microbiomeMarker)
+    library(lefserBenchmarking)
+    library(grid)
+    library(VennDiagram)
+    library(dplyr)
+    library(ggplot2)
+})
+
+LEfSeZellerDir <- "~/Projects/lefserBenchmarking/vignettes/zeller14/data"
+```
+
+# Load data
+```{r load_zeller14}
+## Old cMD data in the lefser package
+data(zeller14)
+zeller14 <- zeller14[, zeller14$study_condition != "adenoma"]
+```
+
+# Run lefser
+```{r zeller14_by_lefser}
+zeller14$study_condition <- factor(zeller14$study_condition,
+                                   levels = c("CRC", "control")) # re-levels
+
+set.seed(1982)
+res <- lefser(relativeAb(zeller14), 
+              groupCol = "study_condition", 
+              blockCol = "age_category")
+lefserPlot(res)
+ggsave("Figures/SupFig5A_CRC_lefser.png")
+```
+
+# Run LEfSe
+## From Docker
+Format zeller14 as a LEfSe input:
+```{r eval=FALSE}
+source("~/Projects/lefserBenchmark/inst/scripts/zeller14_txt.R")
+```
+
+## From Docker
+```{r}
+col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_docker_LDA', 'pval')
+lefse_docker <- readr::read_tsv(
+    file.path(LEfSeZellerDir, "zeller14/zeller14.res"),
+    col_names = FALSE, show_col_types = FALSE) %>% 
+    magrittr::set_colnames(col_names) %>% 
+    filter(!is.na(lefse_docker_LDA)) %>% 
+    mutate(lefse_galaxy_LDA = ifelse(class == "control", -lefse_docker_LDA, lefse_docker_LDA),
+           app_name = 'lefse_docker')
+
+lefse_docker$feature <- lapply(lefse_docker$feature, function(x) {
+    strsplit(x, "\\.") %>% unlist %>% tail(., 1)}) %>% unlist
+
+head(lefse_docker)
+```
+
+```{r}
+## Format LEfSe results to plot using `lefserPlot` function
+lefse_docker_for_plot <- lefse_docker %>%
+    mutate(direction = ifelse(class == "control", 1, -1)) %>%
+    mutate(scores = direction * lefse_docker_LDA) %>%
+    select(feature, scores) %>%
+    rename(features = feature)
+attributes(lefse_docker_for_plot)$groups <- c("CRC", "control")
+
+lefserPlot(lefse_docker_for_plot, color = "l")
+ggsave("Figures/SupFig5B_CRC_LEfSe.png")
+```
+
+
+# Run microbiomeMarker
+```{r}
+ps <- formatInput(zeller14, "phyloseq")
+
+set.seed(1982)
+mm_lefse <- run_lefse(
+    ps,
+    wilcoxon_cutoff = 0.05,
+    group = "study_condition",
+    subgroup = "age_category",
+    kw_cutoff = 0.05,
+    multigrp_strat = TRUE,
+    lda_cutoff = 2
+)
+
+plot_ef_bar(mm_lefse)
+ggsave("Figures/SupFig5C_CRC_microbiomeMarker.png")
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+## Clean up the feature names from MM output
+vectors <- marker_table(mm_lefse)$feature
+vectors_updated <- lapply(vectors, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist %>%
+    stringr::str_replace(., "_p__.*$|_c__.*$|_o__.*$|_f__.*$|_g__.*$|_s__.*$", "")
+vectors_updated
+```
+
+
+# Comparisons
+```{r}
+lefser_output <- res %>% 
+    mutate(app_name = 'lefser') %>% 
+    arrange(scores) %>% 
+    dplyr::rename(lefser_LDA = scores)
+lefser_output$feature <- lapply(lefser_output$feature, function(x) {
+    strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist
+```
+
+```{r}
+set1 <- lefse_docker$feature # LEfSe
+set2 <- lefser_output$feature # lefser
+set3 <- vectors_updated # biomarkers from microbiomeMarker
+    
+source("~/Projects/lefserBenchmarking/R/threeVennDiagram.R")
+fit <- threeVennDiagram(set1, set2, set3)
+plot(fit, quantities = TRUE)
+ggsave("Figures/SupFig5D_CRC_VennDiagram.png")
+```
+
+
+
+# SessionInfo
+<details>
+```{r}
+sessionInfo()
+```
+</details>
