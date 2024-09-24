@@ -26,6 +26,7 @@ suppressPackageStartupMessages({
     library(lefser)
     library(microbiomeMarker)
     library(lefserBenchmarking)
+    library(ggplot2)
 })
 ```
 
@@ -40,6 +41,11 @@ source("~/Projects/lefserBenchmarking/R/addTaxon.R")
 ```{r}
 prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv") # taxon name
 ```
+## Features identified
+Scripts for the biomarker discovery by each method (if not described in this 
+vignette) are available in the same directory with the file name of 
+`reproducibility_gingival_{package_name}.R` (for lefser and microbiomeMarker) 
+and `vignettes/LEfSe_Docker_Run.qmd` (for LEfSe).
 
 # Results
 ## LEfSe
@@ -84,11 +90,7 @@ lefse_docker_for_plot <- lefse_tb %>%
 
 attributes(lefse_docker_for_plot)$groups <- c("supragingival_plaque", "subgingival_plaque")
 lefserPlot(lefse_docker_for_plot, color = "l")
-```
-
-#### Cladogram
-```{r}
-
+ggsave("Figures/SupFig3B_gingival_LEfSe.png")
 ```
 
 
@@ -129,12 +131,49 @@ lefser_inter <- lefser_tb %>%
     dplyr::rename(otu = features, features = most_specific_taxa)
 
 lefserPlot(lefser_inter)
+ggsave("Figures/SupFig3A_gingival_lefser.png")
 ```
 
 
-```{r}
+```{r feature_in_histogram}
 plot_group <- lefserPlotFeat(lefser_res, lefser_res$features[[1]])
 plot_group
+```
+
+```{r cladogram, eval=FALSE}
+##### Prepare input data -------------------------------------
+tse_subset <- readRDS("data/gingival_dataset_for_benchmarking.rds")
+rankNames <- colnames(rowData(tse_subset))
+rankNames <- stringr::str_replace(rankNames, "superkingdom", "kingdom")
+colnames(rowData(tse_subset)) <- rankNames
+colData(tse_subset)$body_subsite <- factor(
+    colData(tse_subset)$body_subsite,
+    levels = c("supragingival_plaque", "subgingival_plaque")
+)
+
+lefserInput <- relativeAb(tse_subset)
+
+## Parameters
+kwth <- 0.01
+wth <- 0.01
+ldath <- 3
+
+## Only with the terminal nodes
+terminal_nodes <- get_terminal_nodes(rownames(tse_subset))
+lefserInput2 <- tse_subset[terminal_nodes, ] %>% relativeAb(.)
+
+## All ranks for cladogram
+source("~/Projects/lefserBenchmarking/R/lefserAllRanks2.R")
+set.seed(1982)
+resAll <- lefserAllRanks2(
+    lefserInput2,
+    kruskal.threshold = kwth,
+    wilcox.threshold = wth,
+    lda.threshold = ldath,
+    groupCol = "body_subsite",
+    blockCol = NULL)
+
+lefserPlotClad(resAll, showTipLabels = TRUE)
 ```
 
 ```{r}
@@ -163,7 +202,19 @@ lefser_summary2
 ### Strict threshold
 ```{r}
 mm_res <- readRDS("data/gingival_a0.01_w0.01_lda3_mm.rds")
+
+# ## Convert OTU to taxa name in MM output
+# otu <- marker_table(mm_res)$feature
+# otu_updated <- plyr::mapvalues(
+#     x = otu,
+#     from = prior_info$taxon_name,
+#     to = prior_info$most_specific_taxa,
+#     warn_missing = TRUE
+# )
+# marker_table(mm_res)$feature <- otu_updated
+
 plot_ef_bar(mm_res)
+ggsave("Figures/SupFig3C_gingival_microbiomeMarker.png")
 ```
 
 ```{r}
