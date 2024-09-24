@@ -254,7 +254,7 @@ mm_summary2
 
 # Comparison
 ```{r}
-## Summary table of detected taxa
+## Summary table of detected taxa under the strict thresholds
 lefse_annot <- data.frame(annotation = lefse_tb$taxon_annotation, tool = "LEfSe")
 lefser_annot <- data.frame(annotation = lefser_tb$taxon_annotation, tool = "lefser")
 mm_annot <- data.frame(annotation = mm_tb$taxon_annotation, tool = "MM")
@@ -264,7 +264,7 @@ table(all_annot$tool, all_annot$annotation, useNA = "ifany")
 ```
 
 ```{r echo=FALSE, eval=FALSE}
-## Summary table of detected annotation
+## Summary table (in percentage) of detected annotation
 lefse_taxa <- data.frame(taxa = lefse_tb$most_specific_taxa, tool = "LEfSe")
 lefser_taxa <- data.frame(taxa = lefser_tb$most_specific_taxa, tool = "lefser")
 mm_taxa <- data.frame(taxa = mm_tb$most_specific_taxa, tool = "MM")
@@ -280,6 +280,8 @@ all_taxa_tb/rowSums(all_taxa_tb)
 
 # Plot
 ## Venn diagrams
+Selected features with the strict thresholds
+
 ```{r}
 lefse_taxa <- unique(lefse_tb$most_specific_taxa)
 lefser_taxa <- unique(lefser_tb$most_specific_taxa)
@@ -287,5 +289,6 @@ mm_taxa <- unique(mm_tb$most_specific_taxa)
 
 fit <- threeVennDiagram(lefse_taxa, lefser_taxa, mm_taxa)
 base::plot(fit, quantities = TRUE) 
+ggsave("Figures/SupFig3D_gingival_venn_diagram.png")
 ```
 
