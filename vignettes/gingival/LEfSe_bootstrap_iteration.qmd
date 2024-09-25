@@ -31,20 +31,29 @@ suppressPackageStartupMessages({
 # Data
 ## LEfSe Bootstrap Iterations
 ```{r eval=FALSE}
+source("~/Projects/lefserBenchmarking/R/addTaxon.R")
 wd <- "~/Projects/lefserBenchmarking/vignettes/gingival/data"
 LEfSeDatDir <- file.path(wd, "LEfSe_Bootstrap_Iterations")
-LEfSe_iter_tb_nonNA <- getLEfSeIterSummary(LEfSeDatDir, 20)
+LEfSe_iter_tb_nonNA <- getLEfSeIterSummary(LEfSeDatDir, 20, "supragingival_plaque")
+
+## Add annotation
+prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv") # taxon name
+LEfSe_annotation <- LEfSe_iter_tb_nonNA %>%
+    dplyr::rename(features = feature) %>%
+    addTaxon(., prior_info)
+LEfSe_annotation$num_not_detected <- rowSums(LEfSe_annotation[2:21] == 0)
 
 ## Save
-write.csv(LEfSe_iter_tb_nonNA,
+write.csv(LEfSe_annotation,
           file.path(wd, "LEfSe_20iters.csv"), # used relative abundance
           row.names = FALSE)
 ```
 
 ```{r echo=FALSE, message=FALSE}
 wd <- "~/Projects/lefserBenchmarking/vignettes/gingival/data"
-LEfSe_iter_tb_nonNA <- readr::read_csv(file.path(wd, "LEfSe_20iters.csv"))
+LEfSe_annotation <- readr::read_csv(file.path(wd, "LEfSe_20iters.csv"))
 ```
+
 
 ## lefser
 ```{r}
@@ -62,14 +71,13 @@ most_specific_taxa <- prior_info %>%
 ## Summary
 ```{r}
 lefser_reformat <- lefser %>%
-    rename(feature = features, lefser_LDA = scores) %>% 
+    dplyr::rename(feature = features, lefser_LDA = scores) %>% 
     mutate(feature = gsub("_", "", feature) %>% gsub("\\.", "", .)) %>%
     select(feature, lefser_LDA)
 
-num_detected <- rowSums(LEfSe_iter_tb_nonNA[2:21] != 0)
-lefse_reformat <- LEfSe_iter_tb_nonNA %>%
-    mutate(num_detected = num_detected) %>% 
-    select(feature, LDA_iter_5, LDA_iter_30, LDA_iter_100, num_detected)
+lefse_reformat <- LEfSe_annotation %>%
+    dplyr::rename(feature = features) %>%
+    select(feature, LDA_iter_5, LDA_iter_30, LDA_iter_100, num_not_detected)
 
 summary <- dplyr::full_join(lefse_reformat, lefser_reformat, by = "feature")
 summary[summary == 0] <- NA
@@ -81,9 +89,9 @@ head(summary)
 ## Full iteration results
 tax_annot <- prior_info %>% select(-new_names)
 
-num_detected <- rowSums(LEfSe_iter_tb_nonNA[2:21] != 0)
+num_not_detected <- rowSums(LEfSe_iter_tb_nonNA[2:21] == 0)
 supTb <- LEfSe_iter_tb_nonNA %>%
-    mutate(num_detected = num_detected) %>%
+    mutate(num_not_detected = num_not_detected) %>%
     dplyr::full_join(., lefser_reformat, by = "feature") %>%
     dplyr::rename(features = feature) %>%
     dplyr::left_join(., tax_annot, by = "features") %>%
@@ -112,7 +120,8 @@ dat <- tibble::column_to_rownames(LEfSe_iter_tb_nonNA, "feature") %>%
     dplyr::left_join(., most_specific_taxa, by = "features")
 
 ggplot(dat) +
-  geom_line(aes(iter, LDA, colour = new_names)) +
+  geom_line(aes(iter, abs(LDA), colour = new_names)) +
+    theme_bw() +
     theme(legend.position = "none") +
     labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
          subtitle = "25 features detected during iterations",
@@ -134,7 +143,7 @@ dat2 <- tibble::column_to_rownames(LEfSe_iter_always_detected, "feature") %>%
     dplyr::left_join(., most_specific_taxa, by = "features")
 
 ggplot(dat2) +
-    geom_line(aes(iter, LDA, col = new_names), show.legend = FALSE) +
+    geom_line(aes(iter, abs(LDA), col = new_names), show.legend = FALSE) +
     ylim(3, 3.6) +
     theme(legend.position = "bottom") +
     theme_bw() +
@@ -149,7 +158,7 @@ Plot some of the bootstrap iterations with lefser
 ```{r}
 ## Format for plotting
 tb <- summary %>%
-    select(-num_detected) %>%
+    select(-num_not_detected) %>%
     na.omit() %>%
     data.table::melt(., id = "feature")
 
@@ -159,6 +168,7 @@ ggplot() +
              position = "dodge", stat = "identity") +
     scale_y_break(c(0.3, 3)) +
     scale_fill_discrete(name = "") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
     scale_fill_manual(values = c("red", "orange", "yellow", "blue")) +
     labs(title = "Reproducibility of LDA scores",
@@ -195,8 +205,8 @@ ggplot(dat2) +
 ```
 
 
-## 7 features sometimes detected 
-```{r}
+## 8 features sometimes detected 
+```{r eval=FALSE}
 ## The features detected only a few times
 sometimes_detected_features <- which(rowSums(LEfSe_iter_tb_nonNA == 0) != 0)
 LEfSe_iter_sometimes_detected <- LEfSe_iter_tb_nonNA[sometimes_detected_features,]

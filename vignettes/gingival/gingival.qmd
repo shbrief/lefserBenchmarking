@@ -288,7 +288,6 @@ lefser_taxa <- unique(lefser_tb$most_specific_taxa)
 mm_taxa <- unique(mm_tb$most_specific_taxa)
 
 fit <- threeVennDiagram(lefse_taxa, lefser_taxa, mm_taxa)
-base::plot(fit, quantities = TRUE) 
-ggsave("Figures/SupFig3D_gingival_venn_diagram.png")
+base::plot(fit, quantities = TRUE) # Save as `Figures/SupFig3D_gingival_venn_diagram.png`
 ```
 
