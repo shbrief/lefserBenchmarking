@@ -1,10 +1,10 @@
 #' Get the LEfSe iteration summary table 
 #'
-#' @return A data frame with `iter`+3 columns. `iter` columns are results from
+#' @return A data frame with '`iter`+3' columns. `iter` columns are results from
 #' each bootstrap iterations and three columns are `feature`, `mean`, and `sd`. 
 #'
 #' @export
-getLEfSeIterSummary <- function(LEfSeDatDir, iter = 10) {
+getLEfSeIterSummary <- function(LEfSeDatDir, iter = 10, reference = NA) {
     
     ## LEfSe results from Docker
     col_names <- c('feature', 'log_hi_class_avg', 'class', 'LDA', 'pval')
@@ -23,6 +23,15 @@ getLEfSeIterSummary <- function(LEfSeDatDir, iter = 10) {
             file.path(LEfSeDatDir, ordered_fnames[i]), col_names = FALSE, show_col_types = FALSE) %>% 
             magrittr::set_colnames(col_names) %>% 
             filter(!is.na(LDA))
+        
+        ## Mark the enrichment direction
+        if (is.na(reference)) {
+            lvs <- paste(unique(res$class), collapse = ", ")
+            msg <- paste("`reference` level is missing. Specify from followings:\n",
+                         lvs)
+            stop(msg)
+        }
+        res$LDA <- ifelse(res$class == reference, res$LDA*(-1), res$LDA)
         
         # res$feature <- lapply(res$feature, function(x) {
         #     strsplit(x, "\\.") %>% unlist %>% tail(., 1) %>% 

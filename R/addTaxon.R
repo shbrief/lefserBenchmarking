@@ -1,4 +1,4 @@
-#' @param x A data frame with
+#' @param x A data frame with the key column labeled as `features`
 #'
 #' @export
 addTaxon <- function(x, prior_info) {
