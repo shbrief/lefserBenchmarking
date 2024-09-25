@@ -65,20 +65,14 @@ mice_se <- SummarizedExperiment(
 )
 ```
 
-```{r eval=FALSE, echo=FALSE}
-# Subset to terminal nodes
-tn <- get_terminal_nodes(rownames(mice_se))
-mice_se <- mice_se[tn,]
-```
-
 ```{r}
 set.seed(1982)
 res <- lefser(relativeAb(mice_se), 
               groupCol = "Genotype", 
               kruskal.threshold = 0.01,
               lda.threshold = 2)
-lefserPlot(res, title = "lefser")
-ggsave("Figures/Fig1A_mice_lefser.png")
+lefserPlot(res)
+ggsave("Figures/Fig1B_mice_lefser.png")
 ```
 
 ```{r message=FALSE}
@@ -91,6 +85,29 @@ lefser_output$feature <- lapply(lefser_output$feature, function(x) {
 
 head(lefser_output)
 ```
+
+## Histogram
+```{r}
+lefserPlotFeat(res, res$features[[1]])
+ggsave("Figures/mice_lefser_hist.png")
+```
+
+## Cladogram
+```{r}
+## Get terminal nodes
+tn <- get_terminal_nodes(rownames(mice_se))
+mice_se_tn <- mice_se[tn,]
+
+set.seed(1982)
+resAll <- lefserAllRanks(
+    relativeAb(mice_se_tn), 
+    groupCol = "Genotype", 
+    kruskal.threshold = 0.01,
+    lda.threshold = 2)
+lefserPlotClad(resAll, showTipLabels = TRUE)
+ggsave("Figures/mice_lefser_cladogram.png")
+```
+
 
 
 # LEfSe from Docker
@@ -115,11 +132,11 @@ lefse_docker_for_plot <- lefse_docker %>%
     mutate(direction = ifelse(class == "truc", 1, -1)) %>%
     mutate(scores = direction * lefse_docker_LDA) %>%
     select(feature, scores) %>%
-    rename(features = feature)
+    dplyr::rename(features = feature)
 attributes(lefse_docker_for_plot)$groups <- c("rag2", "truc")
 
-lefserPlot(lefse_docker_for_plot, title = "LEfSe", color = "l")
-ggsave("Figures/Fig1B_mice_LEfSe.png")
+lefserPlot(lefse_docker_for_plot, color = "l")
+ggsave("Figures/Fig1A_mice_LEfSe.png")
 ```
 
 
@@ -130,14 +147,13 @@ mice_ps <- mia::convertToPhyloseq(mice_se,
 set.seed(1982)
 mm_lefse <- run_lefse(
     mice_ps,
-    wilcoxon_cutoff = 0.01,
+    kw_cutoff = 0.01,
     group = "Genotype",
     multigrp_strat = TRUE,
     lda_cutoff = 2
 )
 
 plot_ef_bar(mm_lefse)
-ggsave("Figures/SupFig4A_mice_microbiomeMarker.png")
 ```
 
 ```{r}
@@ -174,7 +190,6 @@ setdiff(set2, set3)
 source("~/Projects/lefserBenchmarking/R/threeVennDiagram.R")
 fit <- threeVennDiagram(set2, set1, set3)
 plot(fit, quantities = TRUE)
-ggsave("Figures/SupFig4B_mice_venn_diagram.png")
 ```
 
 
