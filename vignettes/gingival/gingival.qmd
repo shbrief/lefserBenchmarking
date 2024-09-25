@@ -188,8 +188,9 @@ lefser_summary
 ```{r}
 lefser_res2 <- readRDS("data/gingival_a0.05_w0.05_lda2_lefser.rds")
 
-lefser_summary2 <- lefser_res2 %>%
-    addTaxon(prior_info) %>%
+lefser_tb2 <- addTaxon(lefser_res2, prior_info)
+
+lefser_summary2 <- lefser_tb2 %>%
     mutate(class = ifelse(scores < 0, "supragingival", "subgingival")) %>%
     group_by(class, taxon_annotation) %>%
     summarise(n = n())
@@ -253,6 +254,7 @@ mm_summary2
 ```
 
 # Comparison
+## Strict threshold
 ```{r}
 ## Summary table of detected taxa under the strict thresholds
 lefse_annot <- data.frame(annotation = lefse_tb$taxon_annotation, tool = "LEfSe")
@@ -263,25 +265,22 @@ all_annot <- rbind(lefse_annot, lefser_annot, mm_annot)
 table(all_annot$tool, all_annot$annotation, useNA = "ifany") 
 ```
 
-```{r echo=FALSE, eval=FALSE}
-## Summary table (in percentage) of detected annotation
-lefse_taxa <- data.frame(taxa = lefse_tb$most_specific_taxa, tool = "LEfSe")
-lefser_taxa <- data.frame(taxa = lefser_tb$most_specific_taxa, tool = "lefser")
-mm_taxa <- data.frame(taxa = mm_tb$most_specific_taxa, tool = "MM")
+## Permissive threshold
+```{r}
+## Summary table of detected taxa under the strict thresholds
+lefse_annot2 <- data.frame(annotation = lefse_tb2$taxon_annotation, tool = "LEfSe")
+lefser_annot2 <- data.frame(annotation = lefser_tb2$taxon_annotation, tool = "lefser")
+mm_annot2 <- data.frame(annotation = mm_tb2$taxon_annotation, tool = "MM")
 
-all_taxa <- rbind(lefse_taxa, lefser_taxa, mm_taxa)
-all_taxa_tb <- table(all_taxa$tool, all_taxa$taxa, useNA = "ifany") 
-all_taxa_tb/rowSums(all_taxa_tb)
+all_annot2 <- rbind(lefse_annot2, lefser_annot2, mm_annot2)
+table(all_annot2$tool, all_annot2$annotation, useNA = "ifany") 
 ```
 
 
 
 
-
-# Plot
-## Venn diagrams
-Selected features with the strict thresholds
-
+# Venn diagrams
+## Strict threshold
 ```{r}
 lefse_taxa <- unique(lefse_tb$most_specific_taxa)
 lefser_taxa <- unique(lefser_tb$most_specific_taxa)
@@ -291,3 +290,17 @@ fit <- threeVennDiagram(lefse_taxa, lefser_taxa, mm_taxa)
 base::plot(fit, quantities = TRUE) # Save as `Figures/SupFig3D_gingival_venn_diagram.png`
 ```
 
+## Permissive threshold
+```{r}
+lefse_taxa2 <- unique(lefse_tb2$most_specific_taxa)
+lefser_taxa2 <- unique(lefser_tb2$most_specific_taxa)
+mm_taxa2 <- unique(mm_tb2$most_specific_taxa)
+
+fit2 <- threeVennDiagram(lefse_taxa2, lefser_taxa2, mm_taxa2)
+base::plot(fit2, quantities = TRUE)
+
+fit3 <- threeVennDiagram(unique(lefse_tb2$features), 
+                         unique(lefser_tb2$features),
+                         unique(mm_tb2$features))
+base::plot(fit3, quantities = TRUE)
+```
