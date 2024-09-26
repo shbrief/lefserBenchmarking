@@ -54,6 +54,26 @@ lefserPlot(res)
 ggsave("Figures/SupFig5A_CRC_lefser.png")
 ```
 
+## Histogram
+```{r}
+lefserPlotFeat(res, res$features[[1]])
+```
+
+## Cladogram
+```{r}
+## Get terminal nodes
+tn <- get_terminal_nodes(rownames(zeller14))
+zeller14_tn <- zeller14[tn,]
+
+set.seed(1982)
+# resAll <- lefserAllRanks(relativeAb(zeller14_tn), 
+#                          groupCol = "study_condition", 
+#                          blockCol = "age_category")
+resAll <- lefserAllRanks(relativeAb(zeller14_tn), 
+                         groupCol = "study_condition")
+lefserPlotClad(resAll, showTipLabels = TRUE)
+```
+
 # Run LEfSe
 ## From Docker
 Format zeller14 as a LEfSe input:
@@ -112,13 +132,12 @@ ggsave("Figures/SupFig5C_CRC_microbiomeMarker.png")
 ```
 
 
-```{r echo=FALSE, eval=FALSE}
+```{r echo=FALSE}
 ## Clean up the feature names from MM output
 vectors <- marker_table(mm_lefse)$feature
 vectors_updated <- lapply(vectors, function(x) {
     strsplit(x, "\\|") %>% unlist %>% tail(., 1)}) %>% unlist %>%
     stringr::str_replace(., "_p__.*$|_c__.*$|_o__.*$|_f__.*$|_g__.*$|_s__.*$", "")
-vectors_updated
 ```
 
 
@@ -140,7 +159,6 @@ set3 <- vectors_updated # biomarkers from microbiomeMarker
 source("~/Projects/lefserBenchmarking/R/threeVennDiagram.R")
 fit <- threeVennDiagram(set1, set2, set3)
 plot(fit, quantities = TRUE)
-ggsave("Figures/SupFig5D_CRC_VennDiagram.png")
 ```
 
 

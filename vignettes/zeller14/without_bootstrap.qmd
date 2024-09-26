@@ -90,6 +90,7 @@ lefser_output2$feature <- lapply(lefser_output2$feature, function(x) {
 set1 <- lefser_output1$feature # without bootstrap
 set2 <- lefser_output2$feature # with bootstrap
 
+source("~/Projects/lefserBenchmarking/R/threeVennDiagram.R")
 fit <- twoVennDiagram(set1, set2, "Updated", "Original")
 base::plot(fit, quantities = TRUE) 
 ```
