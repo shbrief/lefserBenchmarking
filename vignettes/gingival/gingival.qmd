@@ -292,6 +292,27 @@ base::plot(fit, quantities = TRUE) # Save as `Figures/SupFig3D_gingival_venn_dia
 
 ## Permissive threshold
 ```{r}
+## Subgingival Taxa
+lefse_sub <- lefse_tb2 %>% filter(class == "subgingival_plaque") %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+lefser_sub <- lefser_tb2 %>% filter(scores > 0) %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+mm_sub <- mm_tb2 %>% filter(enrich_group == "subgingival_plaque") %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+fit_sub <- threeVennDiagram(lefse_sub, lefser_sub, mm_sub)
+base::plot(fit_sub, quantities = TRUE)
+
+lefse_sup <- lefse_tb2 %>% filter(class == "supragingival_plaque") %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+lefser_sup <- lefser_tb2 %>% filter(scores < 0) %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+mm_sup <- mm_tb2 %>% filter(enrich_group == "supragingival_plaque") %>% 
+    select(most_specific_taxa) %>% unique %>% pull
+fit_sup <- threeVennDiagram(lefse_sup, lefser_sup, mm_sup)
+base::plot(fit_sup, quantities = TRUE)
+
+
+## All taxa
 lefse_taxa2 <- unique(lefse_tb2$most_specific_taxa)
 lefser_taxa2 <- unique(lefser_tb2$most_specific_taxa)
 mm_taxa2 <- unique(mm_tb2$most_specific_taxa)
@@ -299,8 +320,15 @@ mm_taxa2 <- unique(mm_tb2$most_specific_taxa)
 fit2 <- threeVennDiagram(lefse_taxa2, lefser_taxa2, mm_taxa2)
 base::plot(fit2, quantities = TRUE)
 
-fit3 <- threeVennDiagram(unique(lefse_tb2$features), 
-                         unique(lefser_tb2$features),
-                         unique(mm_tb2$features))
-base::plot(fit3, quantities = TRUE)
+## OTU
+# fit3 <- threeVennDiagram(unique(lefse_tb2$features), 
+#                          unique(lefser_tb2$features),
+#                          unique(mm_tb2$features))
+# base::plot(fit3, quantities = TRUE)
 ```
+
+```{r}
+setdiff(lefse_taxa2, lefser_taxa2)
+setdiff(mm_taxa2, lefse_taxa2)
+```
+
