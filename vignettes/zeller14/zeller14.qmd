@@ -31,7 +31,7 @@ suppressPackageStartupMessages({
     library(ggplot2)
 })
 
-LEfSeZellerDir <- "~/Projects/lefserBenchmarking/vignettes/zeller14/data"
+LEfSeZellerDir <- "vignettes/zeller14/data"
 ```
 
 # Load data
@@ -51,27 +51,29 @@ res <- lefser(relativeAb(zeller14),
               groupCol = "study_condition", 
               blockCol = "age_category")
 lefserPlot(res)
-ggsave("Figures/SupFig5A_CRC_lefser.png")
+ggsave("Figures/Fig1A_CRC_lefser.png")
 ```
 
 ## Histogram
 ```{r}
 lefserPlotFeat(res, res$features[[1]])
+lefserPlotFeat(res, res$features[[nrow(res)]])
+ggsave("Figures/Fig1C_CRC_histogram.png")
 ```
 
 ## Cladogram
 ```{r}
-## Get terminal nodes
 tn <- get_terminal_nodes(rownames(zeller14))
 zeller14_tn <- zeller14[tn,]
+zeller14_tn_ra <- relativeAb(zeller14_tn)
+zeller14_input <- rowNames2RowData(zeller14_tn_ra)
 
-set.seed(1982)
-# resAll <- lefserAllRanks(relativeAb(zeller14_tn), 
-#                          groupCol = "study_condition", 
-#                          blockCol = "age_category")
-resAll <- lefserAllRanks(relativeAb(zeller14_tn), 
-                         groupCol = "study_condition")
-lefserPlotClad(resAll, showTipLabels = TRUE)
+resAll <- lefserClades(zeller14_input, groupCol = "study_condition")
+lefserPlotClad(resAll) 
+ggsave("Figures/Fig1D_CRC_cladogram.png")
+
+resAll2 <- lefserClades(zeller14_input, groupCol = "study_condition", blockCol = "age_category")
+lefserPlotClad(resAll2, showTipLabels = TRUE)
 ```
 
 # Run LEfSe
@@ -85,7 +87,7 @@ source("~/Projects/lefserBenchmark/inst/scripts/zeller14_txt.R")
 ```{r}
 col_names <- c('feature', 'log_hi_class_avg', 'class', 'lefse_docker_LDA', 'pval')
 lefse_docker <- readr::read_tsv(
-    file.path(LEfSeZellerDir, "zeller14/zeller14.res"),
+    "data/zeller14/zeller14.res",
     col_names = FALSE, show_col_types = FALSE) %>% 
     magrittr::set_colnames(col_names) %>% 
     filter(!is.na(lefse_docker_LDA)) %>% 
@@ -108,7 +110,7 @@ lefse_docker_for_plot <- lefse_docker %>%
 attributes(lefse_docker_for_plot)$groups <- c("CRC", "control")
 
 lefserPlot(lefse_docker_for_plot, color = "l")
-ggsave("Figures/SupFig5B_CRC_LEfSe.png")
+ggsave("Figures/Fig1B_CRC_LEfSe.png")
 ```
 
 
@@ -128,7 +130,7 @@ mm_lefse <- run_lefse(
 )
 
 plot_ef_bar(mm_lefse)
-ggsave("Figures/SupFig5C_CRC_microbiomeMarker.png")
+ggsave("Figures/SupFig3A_CRC_microbiomeMarker.png")
 ```
 
 
@@ -159,6 +161,14 @@ set3 <- vectors_updated # biomarkers from microbiomeMarker
 source("~/Projects/lefserBenchmarking/R/threeVennDiagram.R")
 fit <- threeVennDiagram(set1, set2, set3)
 plot(fit, quantities = TRUE)
+```
+
+## Annotations
+```{r}
+shared <- intersect(set1, set2)
+shared_fullname <- lefser_output %>%
+    filter(feature %in% shared) %>%
+    pull(features)
 ```
 
 
