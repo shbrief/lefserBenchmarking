@@ -9,7 +9,8 @@ Tables in the lefser manuscript.
     - [ongoing] Figure 1D. CRC data analysis with lefser in cladogram
 
 * [Figure 2][]  
-    - Figure 2A. Enrichment results from the analysis of gingival dataset 
+Benchmarking using the microbiome dataset (gingival data) with a ground truth
+    - Figure 2A. Enrichment results 
     - Figure 2B. Differences between putative TPs and FPs at different thresholds
 
 [Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
