@@ -9,7 +9,7 @@ taxNameToTable(x, prefix = TRUE)
 \arguments{
 \item{x}{A character vector of taxonomic names}
 
-\item{prefix}{Logical. If it's `TRUE`, there is a prefix showing the
+\item{prefix}{Logical. If it's `FALSE`, there is a prefix showing the
 taxonomic levels.}
 }
 \description{

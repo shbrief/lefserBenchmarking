@@ -7,7 +7,7 @@
 #' Split the taxonomic label in character into the tax_table format
 #'
 #' @param x A character vector of taxonomic names
-#' @param prefix Logical. If it's `TRUE`, there is a prefix showing the
+#' @param prefix Logical. If it's `FALSE`, there is a prefix showing the
 #' taxonomic levels.
 #'
 #' @export

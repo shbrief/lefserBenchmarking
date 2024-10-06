@@ -4,10 +4,10 @@
 \alias{getLEfSeIterSummary}
 \title{Get the LEfSe iteration summary table}
 \usage{
-getLEfSeIterSummary(LEfSeDatDir, iter = 10)
+getLEfSeIterSummary(LEfSeDatDir, iter = 10, reference = NA)
 }
 \value{
-A data frame with `iter`+3 columns. `iter` columns are results from
+A data frame with '`iter`+3' columns. `iter` columns are results from
 each bootstrap iterations and three columns are `feature`, `mean`, and `sd`.
 }
 \description{
