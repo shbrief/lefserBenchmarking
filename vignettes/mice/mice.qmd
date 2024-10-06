@@ -56,7 +56,8 @@ rownames(relative_ab) <- mice[["X1"]][-1]
 colData <- as(mice[1, -1], "data.frame") %>% t 
 colnames(colData) <- "Genotype"
 
-rowData <- taxNameToTable(rownames(relative_ab), FALSE)
+rowData <- taxNameToTable(rownames(relative_ab), TRUE)
+rowData <- rowData[,colnames(rowData)[1:6]]
 
 mice_se <- SummarizedExperiment(
     assays = list(relative_abundance = relative_ab), 
@@ -72,7 +73,7 @@ res <- lefser(relativeAb(mice_se),
               kruskal.threshold = 0.01,
               lda.threshold = 2)
 lefserPlot(res)
-ggsave("Figures/Fig1B_mice_lefser.png")
+ggsave("Figures/SupFig4A_mice_lefser.png")
 ```
 
 ```{r message=FALSE}
@@ -93,14 +94,14 @@ ggsave("Figures/mice_lefser_hist.png")
 ```
 
 ## Cladogram
-```{r}
+```{r eval=FALSE}
 ## Get terminal nodes
 tn <- get_terminal_nodes(rownames(mice_se))
-mice_se_tn <- mice_se[tn,]
+mice_tn <- mice_se[tn,]
+mice_tn_ra <- relativeAb(mice_tn)
 
-set.seed(1982)
-resAll <- lefserAllRanks(
-    relativeAb(mice_se_tn), 
+resAll <- lefserClades(
+    mice_tn_ra, 
     groupCol = "Genotype", 
     kruskal.threshold = 0.01,
     lda.threshold = 2)
@@ -136,7 +137,7 @@ lefse_docker_for_plot <- lefse_docker %>%
 attributes(lefse_docker_for_plot)$groups <- c("rag2", "truc")
 
 lefserPlot(lefse_docker_for_plot, color = "l")
-ggsave("Figures/Fig1A_mice_LEfSe.png")
+ggsave("Figures/SupFig4B_mice_LEfSe.png")
 ```
 
 
