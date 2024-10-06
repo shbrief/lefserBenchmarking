@@ -39,7 +39,7 @@ source("~/Projects/lefserBenchmarking/R/addTaxon.R")
 
 ## Prior info
 ```{r}
-prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv") # taxon name
+prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info_gingival_csv") # taxon name
 ```
 ## Features identified
 Scripts for the biomarker discovery by each method (if not described in this 
@@ -140,7 +140,7 @@ plot_group <- lefserPlotFeat(lefser_res, lefser_res$features[[1]])
 plot_group
 ```
 
-```{r cladogram, eval=FALSE}
+```{r cladogram}
 ##### Prepare input data -------------------------------------
 tse_subset <- readRDS("data/gingival_dataset_for_benchmarking.rds")
 rankNames <- colnames(rowData(tse_subset))
@@ -163,9 +163,8 @@ terminal_nodes <- get_terminal_nodes(rownames(tse_subset))
 lefserInput2 <- tse_subset[terminal_nodes, ] %>% relativeAb(.)
 
 ## All ranks for cladogram
-source("~/Projects/lefserBenchmarking/R/lefserAllRanks2.R")
 set.seed(1982)
-resAll <- lefserAllRanks2(
+resAll <- lefserClades(
     lefserInput2,
     kruskal.threshold = kwth,
     wilcox.threshold = wth,
@@ -331,4 +330,14 @@ base::plot(fit2, quantities = TRUE)
 setdiff(lefse_taxa2, lefser_taxa2)
 setdiff(mm_taxa2, lefse_taxa2)
 ```
+
+
+
+# Session Info
+
+<details>
+```{r}
+sessionInfo()
+```
+</details>
 

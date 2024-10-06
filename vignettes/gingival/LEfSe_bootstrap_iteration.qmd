@@ -25,17 +25,19 @@ suppressPackageStartupMessages({
     library(ggbreak)
     library(dplyr)
     library(ggplot2)
+    library(lefserBenchmarking)
 })
 ```
 
 # Data
 ## LEfSe Bootstrap Iterations
-```{r eval=FALSE}
-source("~/Projects/lefserBenchmarking/R/addTaxon.R")
+```{r}
 wd <- "~/Projects/lefserBenchmarking/vignettes/gingival/data"
 LEfSeDatDir <- file.path(wd, "LEfSe_Bootstrap_Iterations")
 LEfSe_iter_tb_nonNA <- getLEfSeIterSummary(LEfSeDatDir, 20, "supragingival_plaque")
+```
 
+```{r eval=FALSE}
 ## Add annotation
 prior_info <- readr::read_csv("~/Projects/lefserBenchmarking/inst/extdata/prior_info.csv") # taxon name
 LEfSe_annotation <- LEfSe_iter_tb_nonNA %>%
@@ -126,7 +128,7 @@ ggplot(dat) +
     labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
          subtitle = "25 features detected during iterations",
          x = "# of Bootstrap Iterations")
-ggsave("Figures/SupFig2A_LEfSe_25features.png")
+ggsave("Figures/LEfSe_25features.png")
 ```
 
 ## 17 features detected all times 
@@ -150,7 +152,7 @@ ggplot(dat2) +
     labs(title = "Effect of LEfSe's bootstrap on its reproducibility",
          subtitle = "17 features detected at all times",
          x = "# of Bootstrap Iterations")
-ggsave("Figures/SupFig2B_LEfSe_17features.png")
+ggsave("Figures/SupFig2A_LEfSe_17features.png")
 ```
 
 ### LDA 
@@ -174,7 +176,7 @@ ggplot() +
     labs(title = "Reproducibility of LDA scores",
          subtitle = "17 features detected at all times",
          y = "abs(LDA score)", x = "")
-ggsave("Figures/SupFig2C_LEfSe_lefser_17features.png")
+ggsave("Figures/SupFig2B_LEfSe_lefser_17features.png")
 ```
 
 

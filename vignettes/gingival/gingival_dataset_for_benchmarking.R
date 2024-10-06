@@ -4,7 +4,7 @@ library(dplyr)
 library(purrr)
 library(tidySummarizedExperiment)
 
-## Gingival data from the microbiomeBenchmarkData pacakge
+## Gingival data from the MicrobiomeBenchmarkData package
 dat_name <- 'HMP_2012_16S_gingival_V35'
 conditions_col <- 'body_subsite'
 conditions <- c(condB = 'subgingival_plaque', condA = 'supragingival_plaque')
