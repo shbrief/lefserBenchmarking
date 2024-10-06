@@ -3,16 +3,16 @@ Tables in the lefser manuscript.
 
 ### Figures
 * [Figure 1][]
-    - Figure 1A. lefser output from mice data in barplot
-    - Figure 1B. LEfSe output from mice data in barplot
-    - [ongoing] Figure 1C. lefser output from mice data in histogram
-    - [ongoing] Figure 1D. lefser output from mice data in cladogram
+    - Figure 1A. CRC data analysis with lefser 
+    - Figure 1B. CRC data analysis with LEfSe in barplot
+    - [ongoing] Figure 1C. CRC data analysis with lefser in histogram
+    - [ongoing] Figure 1D. CRC data analysis with lefser in cladogram
 
 * [Figure 2][]  
     - Figure 2A. Enrichment results from the analysis of gingival dataset 
     - Figure 2B. Differences between putative TPs and FPs at different thresholds
 
-[Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/mice/mice.qmd
+[Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
 [Figure 2]:https://github.com/waldronlab/MicrobiomeBenchmarkDataLefse/blob/main/vignettes/articles/gingival_results.Rmd
 
 
@@ -22,24 +22,23 @@ Tables in the lefser manuscript.
     - Supplementary Figure 1B. CRC data analysis without noise addition and bootstrap
     
 * [Supplementary Figure 2][]
-    - Supplementary Figure 2A. Gingival data analysis with LEfSe bootstrap iterations
-    - Supplementary Figure 2B. Gingival data analysis with LEfSe bootstrap iterations (zoom-in)
-    - Supplementary Figure 2B. Gingival data analysis comparing LEfSe bootstrap iterations and lefser
+    - Supplementary Figure 2A. Gingival data analysis with LEfSe bootstrap iterations (only 17 features)
+    - Supplementary Figure 2B. Gingival data analysis comparing LEfSe bootstrap iterations and lefser (only 17 features)
     
 * [Supplementary Figure 3][]
-    - Supplementary Figure 3A. Mice data analysis using microbiomeMarker   
-    - Supplementary Figure 3B. Venn diagram of the mice data analysis results
+    - Supplementary Figure 3A. CRC data analysis with microbiomeMarker   
+    - Supplementary Figure 3B. Venn diagram of the CRC data analysis results
 
 * [Supplementary Figure 4][]
-    - Supplementary Figure 4A. lefser output from CRC data in barplot
-    - Supplementary Figure 4B. LEfSe output from CRC data in barplot
-    - Supplementary Figure 4C. microbiomeMarker output from CRC data in barplot    
-    - Supplementary Figure 4D. Venn diagram of the CRC data analysis results  
+    - Supplementary Figure 4A. Mice data analysis with lefser 
+    - Supplementary Figure 4B. Mice data analysis with LEfSe 
+    - Supplementary Figure 4C. Mice data analysis with microbiomeMarker    
+    - Supplementary Figure 4D. Venn diagram of the mice data analysis results  
 
 [Supplementary Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/without_bootstrap.qmd
 [Supplementary Figure 2]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/gingival/LEfSe_bootstrap_iteration.qmd
-[Supplementary Figure 3]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/mice/mice.qmd
-[Supplementary Figure 4]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
+[Supplementary Figure 3]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
+[Supplementary Figure 4]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/mice/mice.qmd
    
     
 ### Supplementary Tables
