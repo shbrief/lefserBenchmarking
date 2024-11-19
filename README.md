@@ -5,16 +5,10 @@ Tables in the lefser manuscript.
 * [Figure 1][]
     - Figure 1A. CRC data analysis with lefser 
     - Figure 1B. CRC data analysis with LEfSe in barplot
-    - [ongoing] Figure 1C. CRC data analysis with lefser in histogram
-    - [ongoing] Figure 1D. CRC data analysis with lefser in cladogram
-
-* [Figure 2][]  
-Benchmarking using the microbiome dataset (gingival data) with a ground truth
-    - Figure 2A. Enrichment results 
-    - Figure 2B. Differences between putative TPs and FPs at different thresholds
+    - Figure 1C. CRC data analysis with lefser in histogram
+    - Figure 1D. CRC data analysis with lefser in cladogram
 
 [Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
-[Figure 2]:https://github.com/waldronlab/MicrobiomeBenchmarkDataLefse/blob/main/vignettes/articles/gingival_results.Rmd
 
 
 ### Supplementary Figures
@@ -30,7 +24,12 @@ Benchmarking using the microbiome dataset (gingival data) with a ground truth
     - Supplementary Figure 3A. CRC data analysis with microbiomeMarker   
     - Supplementary Figure 3B. Venn diagram of the CRC data analysis results
 
-* [Supplementary Figure 4][]
+* [Supplementary Figure 4][]  
+Benchmarking using the microbiome dataset (gingival data) with a ground truth
+    - Figure 4A. Enrichment results 
+    - Figure 4B. Differences between putative TPs and FPs at different thresholds
+    
+* [Supplementary Figure 5][]
     - Supplementary Figure 4A. Mice data analysis with lefser 
     - Supplementary Figure 4B. Mice data analysis with LEfSe 
     - Supplementary Figure 4C. Mice data analysis with microbiomeMarker    
@@ -39,7 +38,8 @@ Benchmarking using the microbiome dataset (gingival data) with a ground truth
 [Supplementary Figure 1]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/without_bootstrap.qmd
 [Supplementary Figure 2]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/gingival/LEfSe_bootstrap_iteration.qmd
 [Supplementary Figure 3]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/zeller14/zeller14.qmd
-[Supplementary Figure 4]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/mice/mice.qmd
+[Supplementary Figure 4]: https://github.com/waldronlab/MicrobiomeBenchmarkDataLefse/blob/main/vignettes/articles/gingival_results.Rmd
+[Supplementary Figure 5]: https://github.com/shbrief/lefserBenchmarking/blob/main/vignettes/mice/mice.qmd
    
     
 ### Supplementary Tables
