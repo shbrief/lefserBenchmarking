@@ -46,7 +46,6 @@ zeller14 <- zeller14[, zeller14$study_condition != "adenoma"]
 zeller14$study_condition <- factor(zeller14$study_condition,
                                    levels = c("CRC", "control")) # re-levels
 
-set.seed(1982)
 res <- lefser(relativeAb(zeller14), 
               groupCol = "study_condition", 
               blockCol = "age_category")
@@ -68,8 +67,8 @@ zeller14_tn <- zeller14[tn,]
 zeller14_tn_ra <- relativeAb(zeller14_tn)
 zeller14_input <- rowNames2RowData(zeller14_tn_ra)
 
-resAll <- lefserClades(zeller14_input, groupCol = "study_condition")
-lefserPlotClad(resAll) 
+resAll <- lefserClades(zeller14_input, classCol = "study_condition")
+lefserPlotClad(resAll, showNodeLabels = "o") 
 ggsave("Figures/Fig1D_CRC_cladogram.png")
 
 resAll2 <- lefserClades(zeller14_input, groupCol = "study_condition", blockCol = "age_category")
